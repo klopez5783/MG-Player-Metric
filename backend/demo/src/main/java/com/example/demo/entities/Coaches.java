@@ -8,11 +8,11 @@ import java.util.UUID;
 public class Coaches {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
     @OneToOne
-    @JoinColumn(name = "user_id", nullable = false, unique = true)
+    @MapsId
+    @JoinColumn(name = "id")
     private User user;
 
     @Column (name = "bio", nullable = true)

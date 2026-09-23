@@ -9,10 +9,9 @@ import java.util.UUID;
 public class User {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column (name = "name", nullable = false)
+    @Column (name = "name", nullable = true)
     private String name;
 
     @Column(name = "email", nullable = false, unique = true)

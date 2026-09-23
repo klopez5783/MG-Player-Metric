@@ -1,0 +1,1 @@
+ALTER TABLE players ALTER COLUMN coach_id DROP NOT NULL;

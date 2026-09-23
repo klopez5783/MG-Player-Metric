@@ -11,15 +11,15 @@ import java.util.UUID;
 public class Players {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
     @OneToOne
-    @JoinColumn(name = "user_id", nullable = false, unique = true)
+    @MapsId
+    @JoinColumn(name = "id")
     private User user;
 
     @ManyToOne
-    @JoinColumn(name = "coach_id", nullable = false)
+    @JoinColumn(name = "coach_id", nullable = true)
     private Coaches coach;
 
     @Column(name = "date_of_birth")

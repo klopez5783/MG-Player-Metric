@@ -4,7 +4,6 @@ import { supabase } from '../../api/supabseClient'
 import { syncUser, type Role } from '../../api/backend'
 import AuthCard from '../../components/AuthCard'
 import FormField from '../../components/FormField'
-
 export default function LoginForm() {
   const navigate = useNavigate()
   const [email, setEmail] = useState('')

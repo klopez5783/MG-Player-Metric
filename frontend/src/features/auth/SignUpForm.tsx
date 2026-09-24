@@ -4,7 +4,6 @@ import { supabase } from '../../api/supabseClient'
 import { syncUser, type Role } from '../../api/backend'
 import AuthCard from '../../components/AuthCard'
 import FormField from '../../components/FormField'
-
 type Status =
   | { kind: 'idle' }
   | { kind: 'submitting' }

@@ -15,6 +15,9 @@ export interface MeResponse {
   coachId: string | null
 }
 
+export interface InviteCodeResponse {
+  inviteCode: string
+}
 
 export async function syncUser(accessToken: string, role: Role): Promise<SyncUserResponse> {
   const res = await fetch(`${API_URL}/users/sync`, {
@@ -45,3 +48,18 @@ export async function getMe(accessToken: string): Promise<MeResponse> {
   }
   return res.json()
 }
+
+export async function getInviteCode(accessToken: string): Promise<InviteCodeResponse> {
+  const res = await fetch(`${API_URL}/coaches/me/invite-code`, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  })
+
+  if (!res.ok) {
+    throw new Error(`Failed to fetch invite code (${res.status})`)
+  }
+  return res.json()
+}
+

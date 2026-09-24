@@ -10,7 +10,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import com.example.demo.repositories.PlayerRepository;
 import com.example.demo.dto.InviteCodeResponse;
 import com.example.demo.entities.Coaches;
 import com.example.demo.repositories.CoachRepository;
@@ -24,11 +23,9 @@ public class CoachController {
     private static final SecureRandom RANDOM = new SecureRandom();
 
     private final CoachRepository coachRepository;
-    private final PlayerRepository playerRepository;
 
-    public CoachController(CoachRepository coachRepository, PlayerRepository playerRepository) {
+    public CoachController(CoachRepository coachRepository) {
         this.coachRepository = coachRepository;
-        this.playerRepository = playerRepository;
     }
 
     @GetMapping("/me/invite-code")

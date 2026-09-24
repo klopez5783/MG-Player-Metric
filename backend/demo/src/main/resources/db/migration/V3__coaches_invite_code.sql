@@ -1,0 +1,1 @@
+ALTER TABLE coaches ADD COLUMN invite_code VARCHAR(8) UNIQUE;

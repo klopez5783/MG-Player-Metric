@@ -15,6 +15,10 @@ public class Coaches {
     @JoinColumn(name = "id")
     private User user;
 
+    @Column(name = "invite_code", unique = true)
+    private String inviteCode;
+
+
     @Column (name = "bio", nullable = true)
     private String bio;
 
@@ -32,6 +36,22 @@ public class Coaches {
 
     public void setUser(User user) {
         this.user = user;
+    }
+
+    public String getBio() {
+        return bio;
+    }
+
+    public void setBio(String bio) {
+        this.bio = bio;
+    }
+
+    public String getInviteCode() {
+        return inviteCode;
+    }
+
+    public void setInviteCode(String inviteCode) {
+        this.inviteCode = inviteCode;
     }
 
 }

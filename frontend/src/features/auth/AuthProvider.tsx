@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from '../../api/supabseClient'
 import { AuthContext } from './AuthContext'
@@ -31,10 +31,21 @@ useEffect(() => {                       // effect 2: fetch when the session chan
     .finally(() => setMeLoaded(true))
 }, [session])
 
+// Manual re-fetch. Reads the session from Supabase so it always uses the current token.
+const refreshMe = useCallback(async () => {
+  const { data } = await supabase.auth.getSession()
+  if (!data.session) return
+  try {
+    setMe(await getMe(data.session.access_token))
+  } catch {
+    setMe(null)
+  }
+}, [])
+
 const meLoading = !!session && !meLoaded
 
 return (
-  <AuthContext.Provider value={{ session, loading, me, meLoading }}>
+  <AuthContext.Provider value={{ session, loading, me, meLoading, refreshMe }}>
     {children}
   </AuthContext.Provider>
 )

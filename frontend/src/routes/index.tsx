@@ -4,6 +4,7 @@ import SignUpForm from '../features/auth/SignUpForm'
 import CoachHome from '../features/home/CoachHome'
 import HomePage from '../features/home/HomePage'
 import PlayerHome from '../features/home/PlayerHome'
+import ProfilePage from '../features/profile/ProfilePage'
 import ProtectedRoute from './ProtectedRoute'
 
 export const router = createBrowserRouter([
@@ -16,6 +17,7 @@ export const router = createBrowserRouter([
       { path: '/home', element: <HomePage /> },
       {path : '/player', element: <PlayerHome /> },
       {path : '/coach', element: <CoachHome /> },
+      { path: '/profile', element: <ProfilePage /> },
     ],
   },
 ])

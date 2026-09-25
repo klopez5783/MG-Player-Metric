@@ -5,6 +5,7 @@ import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.transaction.annotation.Transactional;
@@ -46,6 +47,19 @@ public class PlayerController {
         if (coach == null) return ResponseEntity.notFound().build();  // wrong code
 
         player.setCoach(coach);
+        player.setUpdatedAt(LocalDateTime.now());
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/me/coach")
+    @Transactional
+    public ResponseEntity<Void> leaveCoach(@AuthenticationPrincipal Jwt jwt) {
+        UUID id = UUID.fromString(jwt.getSubject());
+        Players player = playerRepository.findById(id).orElse(null);
+        if (player == null) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();      // not a player
+        if (player.getCoach() == null) return ResponseEntity.status(HttpStatus.CONFLICT).build();  // no coach to leave
+
+        player.setCoach(null);
         player.setUpdatedAt(LocalDateTime.now());
         return ResponseEntity.noContent().build();
     }

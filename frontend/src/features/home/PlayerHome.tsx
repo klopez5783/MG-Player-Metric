@@ -1,12 +1,17 @@
 import { useState, type FormEvent } from 'react'
 import AppHeader from '../../components/AppHeader'
+import { useAuth } from '../../hooks/useAuth'
+import { joinCoachByCode } from '../../api/backend'
 
 export default function PlayerHome() {
-  // TODO: derive from the backend profile (me.coachId) and the coach's name.
-  const [coachName, setCoachName] = useState<string | null>(null)
   const [code, setCode] = useState('')
   const [joining, setJoining] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const { session, me, refreshMe } = useAuth()
+
+  // Linked players see their coach; the name falls back if the coach hasn't set one yet.
+  const coachName = me?.coachId ? (me.coachName ?? 'Your coach') : null
 
   async function handleJoin(e: FormEvent) {
     e.preventDefault()
@@ -17,10 +22,15 @@ export default function PlayerHome() {
       return
     }
 
+    if(!session){
+      setError('Please sign in to join a coach.')
+      return
+    }
+
     setJoining(true)
     try {
-      // TODO: call the backend (POST /players/me/coach with { code }), then refresh the profile.
-      setCoachName('Your coach') // TEMP placeholder so the UI can be seen
+      await joinCoachByCode(session.access_token, code)
+      await refreshMe() // pick up coachId and coachName from the backend
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not join with that code.')
     } finally {

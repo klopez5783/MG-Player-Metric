@@ -20,6 +20,7 @@ export default function SignUpForm() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [name, setName] = useState('')
   const [role, setRole] = useState<Role>('player')
   const [status, setStatus] = useState<Status>({ kind: 'idle' })
 
@@ -44,7 +45,7 @@ export default function SignUpForm() {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { role } },
+      options: { data: { role, name: name.trim() } },
     })
     if (error) {
       setStatus({ kind: 'error', message: error.message })
@@ -59,7 +60,7 @@ export default function SignUpForm() {
     }
 
     try {
-      await syncUser(data.session.access_token, role)
+      await syncUser(data.session.access_token, role, name.trim())
       navigate('/home', { replace: true })
     } catch (err) {
       setStatus({
@@ -119,6 +120,15 @@ export default function SignUpForm() {
           </div>
         </fieldset>
 
+        <FormField
+          label="Full name"
+          id="name"
+          type="text"
+          required
+          autoComplete="name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
         <FormField
           label="Email"
           id="email"

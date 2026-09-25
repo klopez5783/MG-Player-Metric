@@ -28,7 +28,7 @@ export default function LoginForm() {
     const role = data.user.user_metadata?.role as Role | undefined
     if (role) {
       try {
-        await syncUser(data.session.access_token, role)
+        await syncUser(data.session.access_token, role, data.user.user_metadata?.name as string | undefined)
       } catch (err) {
         await supabase.auth.signOut()
         setError(err instanceof Error ? err.message : 'Could not load your profile.')

@@ -7,6 +7,8 @@ export interface AuthState {
   loading: boolean
   me: MeResponse | null
   meLoading: boolean
+  /** Re-fetch the profile, e.g. after joining a coach or updating the name. */
+  refreshMe: () => Promise<void>
 }
 
 export const AuthContext = createContext<AuthState>({
@@ -14,5 +16,6 @@ export const AuthContext = createContext<AuthState>({
   loading: true,
   me: null,
   meLoading: false,
+  refreshMe: async () => {},
 })
 

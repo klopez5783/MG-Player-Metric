@@ -45,6 +45,7 @@ public class UserSyncController {
             return ResponseEntity.badRequest().build();
         }
         String role = request.role().toLowerCase();
+        String name = request.name() == null || request.name().isBlank() ? null : request.name().trim();
 
         UUID userId = UUID.fromString(jwt.getSubject());
         String email = jwt.getClaimAsString("email");
@@ -55,6 +56,7 @@ public class UserSyncController {
             newUser.setId(userId);
             newUser.setEmail(email);
             newUser.setRole(role);
+            newUser.setName(name);
             newUser.setCreatedAt(now);
             newUser.setUpdatedAt(now);
             return userRepository.save(newUser);

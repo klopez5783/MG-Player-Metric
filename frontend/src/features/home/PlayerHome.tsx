@@ -1,17 +1,77 @@
 import { useState, type FormEvent } from 'react'
 import AppHeader from '../../components/AppHeader'
+import AppFooter from '../../components/AppFooter'
 import { useAuth } from '../../hooks/useAuth'
 import { joinCoachByCode } from '../../api/backend'
+import PlayerSnapshot from '../players/PlayerSnapshot'
+import AttributeGrid from '../evaluations/AttributeGrid'
+import StrengthsWeaknesses from '../evaluations/StrengthsWeaknesses'
+import FeedbackBanner from '../evaluations/FeedbackBanner'
+import ActiveDrills from '../drills/ActiveDrills'
+import type { CoachFeedback, Drill, Evaluation } from '../evaluations/types'
 
 export default function PlayerHome() {
+  const { me } = useAuth()
+  const hasCoach = !!me?.coachId
+
+  return (
+    <div className="min-h-screen bg-canvas">
+      <AppHeader />
+      <main className="mx-auto max-w-5xl space-y-4 px-4 py-10">
+        {hasCoach ? <PlayerDashboard /> : <JoinCoachCard />}
+      </main>
+      <AppFooter />
+    </div>
+  )
+}
+
+// TODO: replace these with real fetches once evaluations, drills and coach
+// feedback have backend endpoints.
+function getEvaluation(): Evaluation | null {
+  return null
+}
+
+function PlayerDashboard() {
+  const { me } = useAuth()
+  const evaluation = getEvaluation()
+  const drills: Drill[] = []
+  const feedback: CoachFeedback[] = []
+
+  return (
+    <>
+      {evaluation ? (
+        <>
+          <PlayerSnapshot name={me?.name ?? 'Player'} evaluation={evaluation} />
+
+          <FeedbackBanner feedback={feedback} />
+
+          <section>
+            <h2 className="mb-3 text-sm font-semibold text-ink">Attributes</h2>
+            <AttributeGrid attributes={evaluation.attributes} />
+          </section>
+
+          <StrengthsWeaknesses strengths={evaluation.strengths} weaknesses={evaluation.weaknesses} />
+        </>
+      ) : (
+        <div className="rounded-2xl border border-line bg-surface p-6">
+          <h1 className="text-xl font-semibold text-ink">Welcome, {me?.name ?? 'player'}</h1>
+          <p className="mt-2 text-sm text-ink-soft">
+            You don't have an evaluation yet. Once your coach completes one, your overall rating and
+            attributes will show up here.
+          </p>
+        </div>
+      )}
+
+      <ActiveDrills drills={drills} />
+    </>
+  )
+}
+
+function JoinCoachCard() {
+  const { session, refreshMe } = useAuth()
   const [code, setCode] = useState('')
   const [joining, setJoining] = useState(false)
   const [error, setError] = useState<string | null>(null)
-
-  const { session, me, refreshMe } = useAuth()
-
-  // Linked players see their coach; the name falls back if the coach hasn't set one yet.
-  const coachName = me?.coachId ? (me.coachName ?? 'Your coach') : null
 
   async function handleJoin(e: FormEvent) {
     e.preventDefault()
@@ -22,7 +82,7 @@ export default function PlayerHome() {
       return
     }
 
-    if(!session){
+    if (!session) {
       setError('Please sign in to join a coach.')
       return
     }
@@ -39,57 +99,38 @@ export default function PlayerHome() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-100">
-      <AppHeader />
-      <main className="mx-auto max-w-5xl px-4 py-10">
-        <h1 className="text-2xl font-semibold text-slate-900">Player dashboard</h1>
-        <p className="mt-1 text-sm text-slate-600">
-          Your evaluations and progress will show up here.
-        </p>
+    <section className="mx-auto max-w-md rounded-2xl border border-line bg-surface p-6">
+      <h2 className="text-lg font-semibold text-ink">Join your coach</h2>
+      <p className="mt-1 text-sm text-ink-soft">
+        Enter the code your coach gave you to connect with them.
+      </p>
 
-        <section className="mt-8 max-w-md rounded-2xl bg-white p-6 shadow">
-          {coachName ? (
-            <>
-              <h2 className="text-lg font-semibold text-slate-900">Your coach</h2>
-              <p className="mt-2 text-xl font-semibold text-slate-900">{coachName}</p>
-            </>
-          ) : (
-            <>
-              <h2 className="text-lg font-semibold text-slate-900">Join your coach</h2>
-              <p className="mt-1 text-sm text-slate-600">
-                Enter the code your coach gave you to connect with them.
-              </p>
+      <form onSubmit={handleJoin} className="mt-4 space-y-3">
+        <input
+          type="text"
+          value={code}
+          onChange={(e) => setCode(e.target.value.toUpperCase())}
+          placeholder="ABCD2345"
+          maxLength={8}
+          autoComplete="off"
+          aria-label="Coach code"
+          className="w-full rounded-lg border border-line bg-canvas px-3 py-2 text-center font-mono text-xl uppercase tracking-widest text-ink outline-none placeholder:text-ink-mute focus:border-accent focus:ring-1 focus:ring-accent"
+        />
 
-              <form onSubmit={handleJoin} className="mt-4 space-y-3">
-                <input
-                  type="text"
-                  value={code}
-                  onChange={(e) => setCode(e.target.value.toUpperCase())}
-                  placeholder="ABCD2345"
-                  maxLength={8}
-                  autoComplete="off"
-                  aria-label="Coach code"
-                  className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-center font-mono text-xl uppercase tracking-widest text-slate-900 outline-none focus:border-slate-900 focus:ring-1 focus:ring-slate-900"
-                />
+        {error && (
+          <p role="alert" className="rounded-md border border-accent/40 bg-accent/10 px-3 py-2 text-sm text-ink">
+            {error}
+          </p>
+        )}
 
-                {error && (
-                  <p role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
-                    {error}
-                  </p>
-                )}
-
-                <button
-                  type="submit"
-                  disabled={joining}
-                  className="w-full rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {joining ? 'Joining…' : 'Join by code'}
-                </button>
-              </form>
-            </>
-          )}
-        </section>
-      </main>
-    </div>
+        <button
+          type="submit"
+          disabled={joining}
+          className="w-full rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-ink transition hover:bg-accent-hover active:bg-accent-active disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {joining ? 'Joining…' : 'Join by code'}
+        </button>
+      </form>
+    </section>
   )
 }

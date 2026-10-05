@@ -73,10 +73,11 @@ export default function SignUpForm() {
   if (status.kind === 'confirm-email') {
     return (
       <AuthCard>
-        <h1 className="text-2xl font-semibold text-black">Check your email</h1>
-        <p className="mt-2 text-sm text-slate-600">
-          We sent a confirmation link to <strong>{email}</strong>. Confirm your address, then{' '}
-          <Link to="/login" className="font-medium text-slate-900 underline">
+        <h1 className="text-2xl font-semibold text-ink">Check your email</h1>
+        <p className="mt-2 text-sm text-ink-soft">
+          We sent a confirmation link to <strong className="text-ink">{email}</strong>. Confirm your
+          address, then{' '}
+          <Link to="/login" className="font-medium text-ink underline">
             log in
           </Link>{' '}
           to finish setting up your account.
@@ -87,20 +88,20 @@ export default function SignUpForm() {
 
   return (
     <AuthCard>
-      <h1 className="text-2xl font-semibold text-black">Create your account</h1>
-      <p className="mt-1 text-sm text-slate-600">Sign up to start tracking player metrics.</p>
+      <h1 className="text-2xl font-semibold text-ink">Create your account</h1>
+      <p className="mt-1 text-sm text-ink-soft">Sign up to start tracking player metrics.</p>
 
       <form onSubmit={handleSubmit} className="mt-6 space-y-4">
         <fieldset>
-          <legend className="mb-2 block text-sm font-medium text-slate-700">I am a…</legend>
+          <legend className="mb-2 block text-sm font-medium text-ink-soft">I am a…</legend>
           <div className="grid grid-cols-2 gap-3">
             {ROLES.map((r) => (
               <label
                 key={r.value}
                 className={`cursor-pointer rounded-lg border p-3 text-sm transition ${
                   role === r.value
-                    ? 'border-slate-900 bg-slate-900 text-white'
-                    : 'border-slate-300 bg-white text-slate-700 hover:border-slate-400'
+                    ? 'border-accent bg-accent text-ink'
+                    : 'border-line bg-canvas text-ink-soft hover:border-ink-mute'
                 }`}
               >
                 <input
@@ -112,7 +113,7 @@ export default function SignUpForm() {
                   className="sr-only"
                 />
                 <span className="block font-medium">{r.label}</span>
-                <span className={`block text-xs ${role === r.value ? 'text-slate-300' : 'text-slate-500'}`}>
+                <span className={`block text-xs ${role === r.value ? 'text-white/80' : 'text-ink-mute'}`}>
                   {r.hint}
                 </span>
               </label>
@@ -159,7 +160,7 @@ export default function SignUpForm() {
         />
 
         {status.kind === 'error' && (
-          <p role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+          <p role="alert" className="rounded-md border border-accent/40 bg-accent/10 px-3 py-2 text-sm text-ink">
             {status.message}
           </p>
         )}
@@ -167,15 +168,15 @@ export default function SignUpForm() {
         <button
           type="submit"
           disabled={submitting}
-          className="w-full rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+          className="w-full rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-ink transition hover:bg-accent-hover active:bg-accent-active disabled:cursor-not-allowed disabled:opacity-60"
         >
           {submitting ? 'Creating account…' : 'Sign up'}
         </button>
       </form>
 
-      <p className="mt-6 text-center text-sm text-slate-600">
+      <p className="mt-6 text-center text-sm text-ink-soft">
         Already have an account?{' '}
-        <Link to="/login" className="font-medium text-slate-900 underline">
+        <Link to="/login" className="font-medium text-ink underline">
           Log in
         </Link>
       </p>

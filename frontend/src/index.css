@@ -1,1 +1,24 @@
 @import "tailwindcss";
+
+@theme {
+  /* ~70% */
+  --color-canvas: #000000;
+  --color-surface: #151a1f;
+  --color-surface-hover: #1d2329;
+
+  /* ~20% */
+  --color-line: #2a3036;
+  --color-ink: #ffffff;
+  --color-ink-soft: #c7c9cc;
+  --color-ink-mute: #858a90;
+
+  /* ~10% */
+  --color-accent: #de1b21;
+  --color-accent-hover: #a91218;
+  --color-accent-active: #701015;
+}
+
+body {
+  background: var(--color-canvas);
+  color-scheme: dark;
+}

@@ -1,15 +1,15 @@
 import { useMemo, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router'
-import type { RosterPlayer } from './types'
+import type { Player } from '../../api/backend'
 
-export default function RosterSnapshot({ roster }: { roster: RosterPlayer[] }) {
+export default function RosterSnapshot({ roster }: { roster: Player[] }) {
   const navigate = useNavigate()
   const [query, setQuery] = useState('')
 
   const teamCounts = useMemo(() => {
     const counts = new Map<string, number>()
     for (const player of roster) {
-      counts.set(player.team, (counts.get(player.team) ?? 0) + 1)
+      counts.set(player.team ?? "No Team", (counts.get(player.team ?? "No Team") ?? 0) + 1)
     }
     return [...counts.entries()]
   }, [roster])

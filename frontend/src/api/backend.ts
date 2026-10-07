@@ -21,6 +21,13 @@ export interface InviteCodeResponse {
   inviteCode: string
 }
 
+export interface Player {
+  id: string
+  name: string | null
+  team: string | null
+  position: string | null
+}
+
 export async function syncUser(accessToken: string, role: Role, name?: string): Promise<SyncUserResponse> {
   const res = await fetch(`${API_URL}/users/sync`, {
     method: 'POST',
@@ -101,6 +108,18 @@ export async function updateProfile(accessToken: string, name: string): Promise<
 
   if (!res.ok) {
     throw new Error(`Failed to update profile (${res.status})`)
+  }
+  return res.json()
+}
+
+export async function getMyPlayers(accessToken: string): Promise<Player[]> {
+  const res = await fetch(`${API_URL}/coaches/me/players`, {
+    method: 'GET',
+    headers: { Authorization: `Bearer ${accessToken}` },
+  })
+
+  if (!res.ok) {
+    throw new Error(`Failed to fetch players (${res.status})`)
   }
   return res.json()
 }

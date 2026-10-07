@@ -2,7 +2,9 @@ package com.example.demo.controllers;
 
 import java.security.SecureRandom;
 import java.util.UUID;
+import java.util.List;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -13,6 +15,8 @@ import org.springframework.web.bind.annotation.RestController;
 import com.example.demo.dto.InviteCodeResponse;
 import com.example.demo.entities.Coaches;
 import com.example.demo.repositories.CoachRepository;
+import com.example.demo.repositories.PlayerRepository;
+import com.example.demo.dto.RosterPlayerResponse;
 
 
 @RestController
@@ -23,9 +27,11 @@ public class CoachController {
     private static final SecureRandom RANDOM = new SecureRandom();
 
     private final CoachRepository coachRepository;
+    private final PlayerRepository playerRepository;
 
-    public CoachController(CoachRepository coachRepository) {
+    public CoachController(CoachRepository coachRepository, PlayerRepository playerRepository) {
         this.coachRepository = coachRepository;
+        this.playerRepository = playerRepository;
     }
 
     @GetMapping("/me/invite-code")
@@ -42,6 +48,28 @@ public class CoachController {
 
         return ResponseEntity.ok(new InviteCodeResponse(coach.getInviteCode()));
     }
+
+    @GetMapping("/me/players")
+    public ResponseEntity<List<RosterPlayerResponse>> myPlayers(@AuthenticationPrincipal Jwt jwt) {
+        UUID id = UUID.fromString(jwt.getSubject());
+        if (coachRepository.findById(id).isEmpty()) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
+        List<RosterPlayerResponse> players = playerRepository.findByCoachId(id).stream()
+            .map(player -> new RosterPlayerResponse(
+                player.getId(),
+                player.getUser().getName(),
+                player.getTeam(),
+                player.getPosition()
+            ))
+            .toList();
+
+        return ResponseEntity.ok(players);
+    }
+
+
+
 
     private String generateUniqueCode() {
         String code;

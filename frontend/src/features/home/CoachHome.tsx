@@ -1,44 +1,22 @@
 import AppHeader from '../../components/AppHeader'
 import AppFooter from '../../components/AppFooter'
 import RosterSnapshot from '../players/RosterSnapshot'
-import type { Player } from '../../api/backend'
+import { useCoachRoster } from '../players/useCoachRoster'
 import EvaluationsDue from '../evaluations/EvaluationsDue'
 import PendingVideoReviews from '../drills/PendingVideoReviews'
 import type { PendingVideoReview } from '../evaluations/types'
+import type { RosterPlayer } from '../players/types'
 import ActivityFeed from './ActivityFeed'
 import type { ActivityItem } from './types'
 import QuickActions from './QuickActions'
 import InviteCard from './InviteCard'
-import {getMyPlayers} from '../../api/backend';
-import {useAuth} from "../../hooks/useAuth"
-import {useEffect, useState} from 'react';
 
-// TODO: replace these with real fetches once the roster, evaluation
-// due-dates, video-review and activity endpoints exist.
+// TODO: replace these with real fetches once the evaluation due-dates,
+// video-review and activity endpoints exist.
 export default function CoachHome() {
-  const {session} = useAuth();
-  const [ roster, setRoster ] = useState<Player[]>([]);
+  const { roster } = useCoachRoster()
 
-  useEffect(() => {
-    if (!session) return
-    let cancelled = false
-
-    getMyPlayers(session.access_token)
-      .then((data) => {
-        if (!cancelled) setRoster(data)
-          console.log(data)
-      })
-      .catch((error) => {
-        if (!cancelled) console.error('Error fetching my players:', error)
-      })
-
-    return () => {
-      cancelled = true
-    }
-  }, [session])
-
-
-  // const roster: RosterPlayer[] = []
+  const dueRoster: RosterPlayer[] = [] // no evaluations table yet — see EvaluationsDue
   const reviews: PendingVideoReview[] = []
   const activity: ActivityItem[] = []
 
@@ -54,7 +32,7 @@ export default function CoachHome() {
         <RosterSnapshot roster={roster} />
 
         <div className="grid gap-4 lg:grid-cols-2">
-          <EvaluationsDue roster={roster} />
+          <EvaluationsDue roster={dueRoster} />
           <PendingVideoReviews reviews={reviews} />
         </div>
 

@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from 'react'
+import { useMemo, useState, type SubmitEvent } from 'react'
 import { useNavigate } from 'react-router'
 import type { Player } from '../../api/backend'
 
@@ -14,7 +14,7 @@ export default function RosterSnapshot({ roster }: { roster: Player[] }) {
     return [...counts.entries()]
   }, [roster])
 
-  function handleSearch(e: FormEvent) {
+  function handleSearch(e: SubmitEvent) {
     e.preventDefault()
     navigate(query.trim() ? `/coach/players?q=${encodeURIComponent(query.trim())}` : '/coach/players')
   }

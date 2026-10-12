@@ -2,6 +2,8 @@ import { useCallback, useMemo, useState } from 'react'
 import AppHeader from '../../components/AppHeader'
 import AppFooter from '../../components/AppFooter'
 import { useCoachRoster } from '../players/useCoachRoster'
+import { sendEvaluation } from '../../api/backend'
+import { useAuth } from '../../hooks/useAuth'
 
 // TODO: replace with a real GET /attributes catalog endpoint once one
 // exists — this is just enough to make the form shape visible. A category's
@@ -145,6 +147,7 @@ function toStats<T extends { id: number; subAttributes: { id: number; name: stri
 
 export default function StartEvaluationPage() {
   const { roster, loading: rosterLoading } = useCoachRoster()
+  const { session } = useAuth()
 
   const [playerId, setPlayerId] = useState('')
   const [evaluationDate, setEvaluationDate] = useState(() => new Date().toISOString().slice(0, 10))
@@ -182,7 +185,9 @@ export default function StartEvaluationPage() {
   // No backend endpoint to save to yet — this just collects everything the
   // form currently holds into one object, so you can see the shape of what
   // a real save would eventually send.
-  const handleSave = useCallback(() => {
+  const handleSave = useCallback(async () => {
+    if (!session) return // narrows session from `Session | null` to `Session` below
+
     const ratedSubAttributes = [...ACADEMY_CATEGORIES, ...SKILL_CATEGORIES].flatMap((category) =>
       category.subAttributes
         .filter((sub) => subAttributeRatings[sub.id]?.rating != null)
@@ -207,7 +212,9 @@ export default function StartEvaluationPage() {
     }
 
     console.log('Evaluation payload (not saved — no backend yet):', payload)
+    await sendEvaluation(session?.access_token, payload)
   }, [
+    session,
     playerId,
     evaluationDate,
     evaluationType,

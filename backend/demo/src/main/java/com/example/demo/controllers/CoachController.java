@@ -10,6 +10,8 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import com.example.demo.dto.InviteCodeResponse;
@@ -17,6 +19,7 @@ import com.example.demo.entities.Coaches;
 import com.example.demo.repositories.CoachRepository;
 import com.example.demo.repositories.PlayerRepository;
 import com.example.demo.dto.RosterPlayerResponse;
+import java.util.Map;
 
 
 @RestController
@@ -68,6 +71,14 @@ public class CoachController {
         return ResponseEntity.ok(players);
     }
 
+    @PostMapping("/me/evaluations")
+    public ResponseEntity<Map<String, Object>> testReceiveEvaluation(
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestBody Map<String, Object> body) {
+        UUID id = UUID.fromString(jwt.getSubject());
+        System.out.println("Received from coach " + id + ": " + body);
+        return ResponseEntity.ok(body);
+    }
 
 
 

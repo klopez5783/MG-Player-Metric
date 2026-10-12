@@ -123,3 +123,19 @@ export async function getMyPlayers(accessToken: string): Promise<Player[]> {
   }
   return res.json()
 }
+
+export async function sendEvaluation(accessToken: string, evaluation: Record<string, unknown>): Promise<Record<string, unknown>> {
+  const res = await fetch(`${API_URL}/coaches/me/evaluations`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(evaluation),
+  })
+
+  if (!res.ok) {
+    throw new Error(`Failed to send evaluation (${res.status})`)
+  }
+  return res.json()
+}

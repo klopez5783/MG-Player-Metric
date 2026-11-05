@@ -28,6 +28,18 @@ export interface Player {
   position: string | null
 }
 
+export interface AttributeResponse {
+  id: number
+  name: string
+  description: string | null
+  subAttributes: SubAttributeResponse[]
+}
+
+export interface SubAttributeResponse {
+  id: number
+  name: string
+}
+
 export async function syncUser(accessToken: string, role: Role, name?: string): Promise<SyncUserResponse> {
   const res = await fetch(`${API_URL}/users/sync`, {
     method: 'POST',
@@ -139,3 +151,15 @@ export async function sendEvaluation(accessToken: string, evaluation: Record<str
   }
   return res.json()
 }
+
+export async function getAttributes(accessToken: string): Promise<AttributeResponse[]> {
+  const res = await fetch(`${API_URL}/attributes`, {
+    method: 'GET',
+    headers: { Authorization: `Bearer ${accessToken}` },
+  })
+
+  if (!res.ok) {
+    throw new Error(`Failed to fetch attributes (${res.status})`)
+  }
+  return res.json()
+} 

@@ -4,116 +4,10 @@ import AppFooter from '../../components/AppFooter'
 import { useCoachRoster } from '../players/useCoachRoster'
 import { sendEvaluation } from '../../api/backend'
 import { useAuth } from '../../hooks/useAuth'
+import { useAttributeCatalog } from './useAttributeCatalog'
 
-// TODO: replace with a real GET /attributes catalog endpoint once one
-// exists — this is just enough to make the form shape visible. A category's
-// own score isn't entered directly; it's the average of its sub-attributes,
-// so only sub-attributes get a rating control.
-
-// Weighted academy categories — contribute to the weighted "Academy" preview.
-const ACADEMY_CATEGORIES = [
-  {
-    id: 2,
-    name: 'Football IQ',
-    description: 'Awareness, positioning and tactical decisions',
-    weight: 0.3,
-    subAttributes: [
-      { id: 12, name: 'Awareness' },
-      { id: 13, name: 'Decision Making' },
-      { id: 14, name: 'Positioning' },
-      { id: 15, name: 'Spatial Awareness' },
-      { id: 16, name: 'Anticipation' },
-      { id: 17, name: 'Movement Off Ball' },
-      { id: 18, name: 'Combination Play' },
-      { id: 19, name: 'Transition Awareness' },
-    ],
-  },
-  {
-    id: 4,
-    name: 'Psychological / Learning',
-    description: 'Mindset, behavior and learning capacity',
-    weight: 0.2,
-    subAttributes: [
-      { id: 29, name: 'Coachability' },
-      { id: 30, name: 'Response to Mistakes' },
-      { id: 32, name: 'Concentration' },
-      { id: 33, name: 'Work Rate' },
-      { id: 34, name: 'Resilience' },
-      { id: 35, name: 'Communication' },
-    ],
-  },
-]
-
-// Player-card skills (FIFA-style) — unweighted, shown as their own average,
-// never blended into the academy weighted preview.
-const SKILL_CATEGORIES = [
-  {
-    id: 5,
-    name: 'Pace',
-    subAttributes: [
-      { id: 101, name: 'Acceleration' },
-      { id: 102, name: 'Sprint Speed' },
-    ],
-  },
-  {
-    id: 6,
-    name: 'Shooting',
-    subAttributes: [
-      { id: 103, name: 'Att. Position' },
-      { id: 104, name: 'Finishing' },
-      { id: 105, name: 'Shot Power' },
-      { id: 106, name: 'Long Shots' },
-      { id: 107, name: 'Volleys' },
-      { id: 108, name: 'Penalties' },
-    ],
-  },
-  {
-    id: 7,
-    name: 'Passing',
-    subAttributes: [
-      { id: 109, name: 'Vision' },
-      { id: 110, name: 'Crossing' },
-      { id: 111, name: 'FK Acc.' },
-      { id: 112, name: 'Short Pass' },
-      { id: 113, name: 'Long Pass' },
-      { id: 114, name: 'Curve' },
-    ],
-  },
-  {
-    id: 8,
-    name: 'Dribbling',
-    subAttributes: [
-      { id: 115, name: 'Agility' },
-      { id: 116, name: 'Balance' },
-      { id: 117, name: 'Reactions' },
-      { id: 118, name: 'Ball Control' },
-      { id: 119, name: 'Dribbling' },
-      { id: 120, name: 'Composure' },
-    ],
-  },
-  {
-    id: 9,
-    name: 'Defending',
-    subAttributes: [
-      { id: 121, name: 'Interceptions' },
-      { id: 122, name: 'Heading Acc.' },
-      { id: 123, name: 'Def. Aware' },
-      { id: 124, name: 'Stand Tackle' },
-      { id: 125, name: 'Slide Tackle' },
-    ],
-  },
-  {
-    id: 10,
-    name: 'Physical',
-    subAttributes: [
-      { id: 126, name: 'Jumping' },
-      { id: 127, name: 'Stamina' },
-      { id: 128, name: 'Strength' },
-      { id: 129, name: 'Aggression' },
-    ],
-  },
-]
-
+// One sub-attribute's input: the slider value (undefined until the coach
+// moves it) and an optional note.
 interface RatingEntry {
   rating: number | undefined
   comment: string
@@ -121,13 +15,14 @@ interface RatingEntry {
 
 const emptyEntry: RatingEntry = { rating: undefined, comment: '' }
 
+// Mean rounded to one decimal; null when there's nothing to average.
 function average(values: number[]): number | null {
   if (values.length === 0) return null
   return Math.round((values.reduce((sum, v) => sum + v, 0) / values.length) * 10) / 10
 }
 
-// Each category's score is derived from its own sub-attributes — nothing is
-// entered at the category level.
+// Adds a score (average of rated sub-attributes) and rated/total counts to
+// each category. Nothing is entered at the category level.
 function toStats<T extends { id: number; subAttributes: { id: number; name: string }[] }>(
   categories: T[],
   subAttributeRatings: Record<number, RatingEntry>,
@@ -145,81 +40,97 @@ function toStats<T extends { id: number; subAttributes: { id: number; name: stri
   })
 }
 
+// Coach-facing form: pick a player, rate each sub-attribute from the
+// GET /attributes catalog, add a summary, and POST it as one evaluation.
 export default function StartEvaluationPage() {
   const { roster, loading: rosterLoading } = useCoachRoster()
+  const { catalog } = useAttributeCatalog()
   const { session } = useAuth()
 
   const [playerId, setPlayerId] = useState('')
   const [evaluationDate, setEvaluationDate] = useState(() => new Date().toISOString().slice(0, 10))
   const [evaluationType, setEvaluationType] = useState('initial')
 
+  // Every rating on the form, keyed by sub-attribute id.
   const [subAttributeRatings, setSubAttributeRatings] = useState<Record<number, RatingEntry>>({})
 
   const [strengths, setStrengths] = useState('')
   const [weaknesses, setWeaknesses] = useState('')
   const [generalComment, setGeneralComment] = useState('')
 
+  // Updates one sub-attribute's rating or comment, keeping the other field.
   function setSubAttributeRating(id: number, patch: Partial<RatingEntry>) {
     setSubAttributeRatings((prev) => ({ ...prev, [id]: { ...(prev[id] ?? emptyEntry), ...patch } }))
   }
 
-  const academyStats = useMemo(() => toStats(ACADEMY_CATEGORIES, subAttributeRatings), [subAttributeRatings])
-  const skillStats = useMemo(() => toStats(SKILL_CATEGORIES, subAttributeRatings), [subAttributeRatings])
+  // The catalog with live scores; recalculated when it loads or a rating changes.
+  const skillStats = useMemo(() => toStats(catalog, subAttributeRatings), [catalog, subAttributeRatings])
 
-  // Two separate previews, kept apart on purpose — a weighted academy score
-  // and an unweighted player-card average measure different things, so
-  // blending them into one number wouldn't mean anything coherent.
-  const academyWeighted = useMemo(() => {
-    const present = academyStats.filter((c) => c.score != null)
-    if (present.length === 0) return null
-    const weightSum = present.reduce((sum, c) => sum + c.weight, 0)
-    const weightedSum = present.reduce((sum, c) => sum + (c.score ?? 0) * c.weight, 0)
-    return Math.round((weightedSum / weightSum) * 10) / 10
-  }, [academyStats])
+  // Coachability preview: the Psychological / Learning score, matched by name
+  // since ids can change when the catalog is re-seeded.
+  const coachabilityRating = useMemo(
+    () => skillStats.find((c) => c.name === 'Psychological / Learning')?.score ?? null,
+    [skillStats],
+  )
 
+  // Player-card preview: average of every other rated category.
   const skillCardAverage = useMemo(() => {
-    const present = skillStats.filter((c) => c.score != null).map((c) => c.score as number)
+    const present = skillStats
+    .filter((c) => c.name !== 'Psychological / Learning' && c.score != null)
+    .map((c) => c.score as number)
     return average(present)
   }, [skillStats])
 
-  // No backend endpoint to save to yet — this just collects everything the
-  // form currently holds into one object, so you can see the shape of what
-  // a real save would eventually send.
+  // Save stays disabled until a player and date are chosen and every
+  // sub-attribute has a rating. Notes and the summary are optional.
+  const canSave =
+    playerId !== '' &&
+    evaluationDate !== '' &&
+    skillStats.length > 0 &&
+    skillStats.every((c) => c.ratedCount === c.totalCount)
+
+  // Builds the request body from the form and sends it to
+  // POST /coaches/me/evaluations. Only sub-attributes the coach actually rated
+  // are included, and categories with none rated are left out.
   const handleSave = useCallback(async () => {
     if (!session) return // narrows session from `Session | null` to `Session` below
 
-    const ratedSubAttributes = [...ACADEMY_CATEGORIES, ...SKILL_CATEGORIES].flatMap((category) =>
-      category.subAttributes
-        .filter((sub) => subAttributeRatings[sub.id]?.rating != null)
-        .map((sub) => ({
-          category: category.name,
-          subAttribute: sub.name,
-          rating: subAttributeRatings[sub.id].rating,
-          comment: subAttributeRatings[sub.id].comment || null,
-        })),
-    )
+    const attributes = [...skillStats]
+      .map((category) => ({
+        attributeId: category.id,
+        attribute: category.name,
+        rating: category.score,
+        comment: null,
+        subAttributes: category.subAttributes
+          .filter((sub) => subAttributeRatings[sub.id]?.rating != null)
+          .map((sub) => ({
+            subAttributeId: sub.id,
+            rating: subAttributeRatings[sub.id].rating,
+            comment: subAttributeRatings[sub.id].comment || null,
+          })),
+      }))
+      .filter((attribute) => attribute.subAttributes.length > 0)
+
+    const overallRating = average([skillCardAverage].filter((r): r is number => r != null))
 
     const payload = {
       playerId,
       evaluationDate,
       evaluationType,
-      academyWeighted,
-      skillCardAverage,
+      overallRating,
       strengths,
       weaknesses,
       generalComment,
-      ratedSubAttributes,
+      attributes
     }
-
-    console.log('Evaluation payload (not saved — no backend yet):', payload)
     await sendEvaluation(session?.access_token, payload)
   }, [
     session,
     playerId,
     evaluationDate,
     evaluationType,
+    skillStats,
     subAttributeRatings,
-    academyWeighted,
     skillCardAverage,
     strengths,
     weaknesses,
@@ -271,8 +182,8 @@ export default function StartEvaluationPage() {
             <h2 className="text-sm font-semibold text-ink">Part 2 · Attribute ratings</h2>
             <div className="flex gap-6">
               <div className="text-right">
-                <p className="text-xs text-ink-mute">Academy weighted (preview)</p>
-                <p className="text-2xl font-bold text-ink">{academyWeighted ?? '—'}</p>
+                <p className="text-xs text-ink-mute">Coachability rating (preview)</p>
+                <p className="text-2xl font-bold text-ink">{coachabilityRating ?? '—'}</p>
               </div>
               <div className="text-right">
                 <p className="text-xs text-ink-mute">Player card (preview)</p>
@@ -293,17 +204,6 @@ export default function StartEvaluationPage() {
             ))}
           </div>
         </section>
-
-        <h3 className="px-1 text-xs font-semibold uppercase tracking-wide text-ink-mute">Academy categories</h3>
-        {academyStats.map((category) => (
-          <CategoryCard
-            key={category.id}
-            category={category}
-            weightLabel={`Weight ${Math.round(category.weight * 100)}%`}
-            subAttributeRatings={subAttributeRatings}
-            onRate={setSubAttributeRating}
-          />
-        ))}
 
         {/* Part 3: Summary */}
         <section className="rounded-2xl border border-line bg-surface p-6">
@@ -329,51 +229,34 @@ export default function StartEvaluationPage() {
         <button
           type="button"
           onClick={handleSave}
-          className="rounded-lg bg-accent px-6 py-2.5 text-sm font-medium text-ink transition hover:bg-accent-hover active:bg-accent-active"
+          disabled={!canSave}
+          className="rounded-lg bg-accent px-6 py-2.5 text-sm font-medium text-ink transition hover:bg-accent-hover active:bg-accent-active disabled:cursor-not-allowed disabled:opacity-50"
         >
           Save evaluation
         </button>
-        <p className="text-xs text-ink-mute">Logs the current form data to the console — nothing is sent to a backend yet.</p>
+        {!canSave && (
+          <p className="text-xs text-ink-mute">Select a player and rate every sub-attribute to save.</p>
+        )}
       </main>
       <AppFooter />
     </div>
   )
 }
 
+// A catalog category after toStats has added its score and counts.
 interface CategoryStat {
   id: number
   name: string
-  description?: string
+  description?: string | null
   score: number | null
   ratedCount: number
   totalCount: number
   subAttributes: { id: number; name: string }[]
 }
 
-// A standalone card: the body, wrapped in its own bordered bubble. Used for
-// the Academy categories, which stay visually separate.
-function CategoryCard({
-  category,
-  weightLabel,
-  subAttributeRatings,
-  onRate,
-}: {
-  category: CategoryStat
-  weightLabel?: string
-  subAttributeRatings: Record<number, RatingEntry>
-  onRate: (id: number, patch: Partial<RatingEntry>) => void
-}) {
-  return (
-    <section className="rounded-2xl border border-line bg-surface p-6">
-      <CategoryCardBody category={category} weightLabel={weightLabel} subAttributeRatings={subAttributeRatings} onRate={onRate} />
-    </section>
-  )
-}
-
-// Just the header row + sub-attribute list, no outer bubble — used both
-// inside CategoryCard above and directly inside the merged Part 2 bubble,
-// where several of these share one outer border instead of each getting
-// their own.
+// One category inside the Part 2 bubble: name, description and live score,
+// then a slider and note field for each sub-attribute. No outer border, so
+// several can share the one bubble.
 function CategoryCardBody({
   category,
   weightLabel,
@@ -437,6 +320,7 @@ function CategoryCardBody({
 const fieldClass =
   'w-full rounded-lg border border-line bg-canvas px-3 py-2 text-sm text-ink outline-none focus:border-accent focus:ring-1 focus:ring-accent'
 
+// A small label stacked above any input.
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
@@ -446,6 +330,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   )
 }
 
+// 1–10 slider in half steps, with the current value shown beside it.
 function RatingInput({ value, onChange }: { value: number | undefined; onChange: (value: number) => void }) {
   // A slider always sits somewhere, so it can't show a true "unrated" state
   // the way a button grid could — it starts at the midpoint visually, but

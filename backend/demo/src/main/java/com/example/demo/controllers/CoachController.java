@@ -14,12 +14,27 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import com.example.demo.dto.CreateEvaluationRequest;
+import com.example.demo.dto.CreateEvaluationResponse;
 import com.example.demo.dto.InviteCodeResponse;
+import com.example.demo.dto.AttributeRatingRequest;
+import com.example.demo.dto.SubAttributeRatingRequest;
 import com.example.demo.entities.Coaches;
+import com.example.demo.entities.Players;
+import com.example.demo.entities.Evaluation;
+import com.example.demo.entities.Attribute;
+import com.example.demo.entities.AttributeRating;
+import com.example.demo.entities.SubAttribute;
+import com.example.demo.entities.SubAttributeRating;
 import com.example.demo.repositories.CoachRepository;
 import com.example.demo.repositories.PlayerRepository;
+import com.example.demo.repositories.EvaluationRepository;
+import com.example.demo.repositories.AttributeRepository;
+import com.example.demo.repositories.AttributeRatingRepository;
+import com.example.demo.repositories.SubAttributeRepository;
+import com.example.demo.repositories.SubAttributeRatingRepository;
 import com.example.demo.dto.RosterPlayerResponse;
-import java.util.Map;
 
 
 @RestController
@@ -31,12 +46,30 @@ public class CoachController {
 
     private final CoachRepository coachRepository;
     private final PlayerRepository playerRepository;
+    private final EvaluationRepository evaluationRepository;
+    private final AttributeRepository attributeRepository;
+    private final AttributeRatingRepository attributeRatingRepository;
+    private final SubAttributeRepository subAttributeRepository;
+    private final SubAttributeRatingRepository subAttributeRatingRepository;
 
-    public CoachController(CoachRepository coachRepository, PlayerRepository playerRepository) {
+    public CoachController(
+            CoachRepository coachRepository,
+            PlayerRepository playerRepository,
+            EvaluationRepository evaluationRepository,
+            AttributeRepository attributeRepository,
+            AttributeRatingRepository attributeRatingRepository,
+            SubAttributeRepository subAttributeRepository,
+            SubAttributeRatingRepository subAttributeRatingRepository) {
         this.coachRepository = coachRepository;
         this.playerRepository = playerRepository;
+        this.evaluationRepository = evaluationRepository;
+        this.attributeRepository = attributeRepository;
+        this.attributeRatingRepository = attributeRatingRepository;
+        this.subAttributeRepository = subAttributeRepository;
+        this.subAttributeRatingRepository = subAttributeRatingRepository;
     }
 
+    // Returns the coach's invite code, generating and saving one the first time.
     @GetMapping("/me/invite-code")
     @Transactional
     public ResponseEntity<InviteCodeResponse> myInviteCode(@AuthenticationPrincipal Jwt jwt) {
@@ -52,6 +85,7 @@ public class CoachController {
         return ResponseEntity.ok(new InviteCodeResponse(coach.getInviteCode()));
     }
 
+    // Lists the players who joined this coach; 403 if the caller isn't a coach.
     @GetMapping("/me/players")
     public ResponseEntity<List<RosterPlayerResponse>> myPlayers(@AuthenticationPrincipal Jwt jwt) {
         UUID id = UUID.fromString(jwt.getSubject());
@@ -71,17 +105,77 @@ public class CoachController {
         return ResponseEntity.ok(players);
     }
 
+    // Saves an evaluation for one of the coach's own players, then a rating
+    // row per attribute and per sub-attribute. 403 if the player belongs to
+    // another coach, 400 if an attribute or sub-attribute id doesn't exist.
     @PostMapping("/me/evaluations")
-    public ResponseEntity<Map<String, Object>> testReceiveEvaluation(
+    @Transactional
+    public ResponseEntity<CreateEvaluationResponse> createEvaluation(
             @AuthenticationPrincipal Jwt jwt,
-            @RequestBody Map<String, Object> body) {
-        UUID id = UUID.fromString(jwt.getSubject());
-        System.out.println("Received from coach " + id + ": " + body);
-        return ResponseEntity.ok(body);
+            @RequestBody CreateEvaluationRequest request) {
+            System.out.println("Received request: " + request);
+        UUID coachId = UUID.fromString(jwt.getSubject());
+        Coaches coach = coachRepository.findById(coachId).orElse(null);
+        if (coach == null) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
+        Players player = playerRepository.findById(request.playerId()).orElse(null);
+        if (player == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
+        if (player.getCoach() == null || !player.getCoach().getId().equals(coachId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
+        Evaluation evaluation = new Evaluation();
+        evaluation.setPlayer(player);
+        evaluation.setCoach(coach);
+        evaluation.setEvaluationDate(request.evaluationDate().atStartOfDay());
+        evaluation.setEvaluationType(request.evaluationType());
+        evaluation.setOverallRating(request.overallRating());
+        evaluation.setStrengths(request.strengths());
+        evaluation.setWeaknesses(request.weaknesses());
+        evaluation.setGeneralComment(request.generalComment());
+        evaluationRepository.save(evaluation);
+
+        
+        for (AttributeRatingRequest attrRequest : request.attributes()) {
+            Attribute attribute = attributeRepository.findById(attrRequest.attributeId()).orElse(null);
+            if (attribute == null) {
+                System.out.println("Attribute not found: " + attrRequest.attributeId());
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+            }
+
+            AttributeRating attributeRating = new AttributeRating();
+            attributeRating.setEvaluation(evaluation);
+            attributeRating.setAttribute(attribute);
+            attributeRating.setRating(attrRequest.rating());
+            attributeRating.setComment(attrRequest.comment());
+            attributeRatingRepository.save(attributeRating);
+
+            for (SubAttributeRatingRequest subRequest : attrRequest.subAttributes()) {
+                SubAttribute subAttribute = subAttributeRepository.findById(subRequest.subAttributeId()).orElse(null);
+                if (subAttribute == null) {
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+                }
+
+                SubAttributeRating subAttributeRating = new SubAttributeRating();
+                subAttributeRating.setAttributeRating(attributeRating);
+                subAttributeRating.setSubAttribute(subAttribute);
+                subAttributeRating.setRating(subRequest.rating());
+                subAttributeRating.setComment(subRequest.comment());
+                subAttributeRatingRepository.save(subAttributeRating);
+            }
+        }
+        
+
+        return ResponseEntity.ok(new CreateEvaluationResponse(evaluation.getId()));
     }
 
 
 
+    // Keeps generating codes until one isn't already taken by another coach.
     private String generateUniqueCode() {
         String code;
         do {
@@ -90,6 +184,7 @@ public class CoachController {
         return code;
     }
 
+    // 8 random characters, leaving out look-alikes (0/O, 1/I).
     private String generateCode() {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < 8; i++) {

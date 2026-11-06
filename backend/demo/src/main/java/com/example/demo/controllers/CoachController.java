@@ -3,6 +3,8 @@ package com.example.demo.controllers;
 import java.security.SecureRandom;
 import java.util.UUID;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -12,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -20,6 +23,9 @@ import com.example.demo.dto.CreateEvaluationResponse;
 import com.example.demo.dto.InviteCodeResponse;
 import com.example.demo.dto.AttributeRatingRequest;
 import com.example.demo.dto.SubAttributeRatingRequest;
+import com.example.demo.dto.EvaluationDetailResponse;
+import com.example.demo.dto.AttributeRatingResponse;
+import com.example.demo.dto.SubAttributeRatingResponse;
 import com.example.demo.entities.Coaches;
 import com.example.demo.entities.Players;
 import com.example.demo.entities.Evaluation;
@@ -171,6 +177,66 @@ public class CoachController {
         
 
         return ResponseEntity.ok(new CreateEvaluationResponse(evaluation.getId()));
+    }
+
+
+    // Returns one of the coach's evaluations with its attribute and
+    // sub-attribute ratings nested. 404 if it doesn't exist, 403 if another
+    // coach wrote it. Three queries: the evaluation, its attribute ratings,
+    // and all of its sub-attribute ratings, grouped here.
+    @GetMapping("/me/evaluations/{evaluationId}")
+    @Transactional(readOnly = true)
+    public ResponseEntity<EvaluationDetailResponse> getEvaluationDetail(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable Integer evaluationId) {
+        UUID coachId = UUID.fromString(jwt.getSubject());
+        Evaluation evaluation = evaluationRepository.findById(evaluationId).orElse(null);
+        if (evaluation == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
+        if (!evaluation.getCoach().getId().equals(coachId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
+        Map<Integer, List<SubAttributeRatingResponse>> subRatingsByAttributeRating =
+            subAttributeRatingRepository.findByAttributeRatingEvaluationIdOrderBySubAttributeDisplayOrderAsc(evaluationId).stream()
+                .collect(Collectors.groupingBy(
+                    sub -> sub.getAttributeRating().getId(),
+                    Collectors.mapping(
+                        sub -> new SubAttributeRatingResponse(
+                            sub.getSubAttribute().getId(),
+                            sub.getSubAttribute().getName(),
+                            sub.getRating(),
+                            sub.getComment()
+                        ),
+                        Collectors.toList()
+                    )
+                ));
+
+        List<AttributeRatingResponse> attributes =
+            attributeRatingRepository.findByEvaluationIdOrderByAttributeDisplayOrderAsc(evaluationId).stream()
+                .map(rating -> new AttributeRatingResponse(
+                    rating.getAttribute().getId(),
+                    rating.getAttribute().getName(),
+                    rating.getRating(),
+                    rating.getComment(),
+                    subRatingsByAttributeRating.getOrDefault(rating.getId(), List.of())
+                ))
+                .toList();
+
+        Players player = evaluation.getPlayer();
+        return ResponseEntity.ok(new EvaluationDetailResponse(
+            evaluation.getId(),
+            player.getId(),
+            player.getUser().getName(),
+            evaluation.getEvaluationDate(),
+            evaluation.getEvaluationType(),
+            evaluation.getOverallRating(),
+            evaluation.getStrengths(),
+            evaluation.getWeaknesses(),
+            evaluation.getGeneralComment(),
+            attributes
+        ));
     }
 
 

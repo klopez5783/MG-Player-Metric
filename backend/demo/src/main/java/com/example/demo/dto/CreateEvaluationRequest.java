@@ -5,14 +5,20 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.Valid;
+
 public record CreateEvaluationRequest(
-    UUID playerId,
-    LocalDate evaluationDate,
-    String evaluationType,
-    BigDecimal overallRating,
+    @NotNull UUID playerId,
+    @NotNull LocalDate evaluationDate,
+    @NotNull @Pattern(regexp = "initial|monthly|quarterly") String evaluationType,
+    @DecimalMin("1") @DecimalMax("10") BigDecimal overallRating,
     String strengths,
     String weaknesses,
     String generalComment,
-    List<AttributeRatingRequest> attributes
+    @NotNull @Valid List<AttributeRatingRequest> attributes
 ) {
 }

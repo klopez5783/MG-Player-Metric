@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import jakarta.validation.Valid;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -17,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.example.demo.dto.CreateEvaluationRequest;
 import com.example.demo.dto.CreateEvaluationResponse;
@@ -118,7 +121,7 @@ public class CoachController {
     @Transactional
     public ResponseEntity<CreateEvaluationResponse> createEvaluation(
             @AuthenticationPrincipal Jwt jwt,
-            @RequestBody CreateEvaluationRequest request) {
+            @Valid @RequestBody CreateEvaluationRequest request) {
             System.out.println("Received request: " + request);
         UUID coachId = UUID.fromString(jwt.getSubject());
         Coaches coach = coachRepository.findById(coachId).orElse(null);
@@ -150,7 +153,7 @@ public class CoachController {
             Attribute attribute = attributeRepository.findById(attrRequest.attributeId()).orElse(null);
             if (attribute == null) {
                 System.out.println("Attribute not found: " + attrRequest.attributeId());
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unknown attribute id: " + attrRequest.attributeId());
             }
 
             AttributeRating attributeRating = new AttributeRating();
@@ -163,7 +166,7 @@ public class CoachController {
             for (SubAttributeRatingRequest subRequest : attrRequest.subAttributes()) {
                 SubAttribute subAttribute = subAttributeRepository.findById(subRequest.subAttributeId()).orElse(null);
                 if (subAttribute == null) {
-                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unknown sub-attribute id: " + subRequest.subAttributeId());
                 }
 
                 SubAttributeRating subAttributeRating = new SubAttributeRating();

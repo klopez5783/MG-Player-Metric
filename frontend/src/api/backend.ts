@@ -1,5 +1,9 @@
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8080'
 
+export interface CreateEvaluationResponse {
+  id: number
+}
+
 export type Role = 'coach' | 'player'
 
 export interface SyncUserResponse {
@@ -136,7 +140,7 @@ export async function getMyPlayers(accessToken: string): Promise<Player[]> {
   return res.json()
 }
 
-export async function sendEvaluation(accessToken: string, evaluation: Record<string, unknown>): Promise<Record<string, unknown>> {
+export async function sendEvaluation(accessToken: string, evaluation: Record<string, unknown>): Promise<CreateEvaluationResponse> {
   const res = await fetch(`${API_URL}/coaches/me/evaluations`, {
     method: 'POST',
     headers: {

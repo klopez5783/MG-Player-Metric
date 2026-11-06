@@ -3,6 +3,7 @@ import LoginForm from '../features/auth/LoginForm'
 import SignUpForm from '../features/auth/SignUpForm'
 import AttributeDetailPage from '../features/evaluations/AttributeDetailPage'
 import StartEvaluationPage from '../features/evaluations/StartEvaluationPage'
+import EvaluationDetailPage from '../features/evaluations/EvaluationDetailPage'
 import ProgressPage from '../features/evaluations/ProgressPage'
 import FeedbackHistoryPage from '../features/evaluations/FeedbackHistoryPage'
 import AssignDrillPage from '../features/drills/AssignDrillPage'
@@ -43,6 +44,7 @@ export const router = createBrowserRouter([
       { path: '/coach/reviews', element: <ReviewQueuePage /> },
       { path: '/coach/reviews/:reviewId', element: <VideoReviewPage /> },
       { path: '/coach/evaluations/start', element: <StartEvaluationPage /> },
+      { path: '/coach/evaluations/:evaluationId', element: <EvaluationDetailPage /> },
 
       { path: '/profile', element: <ProfilePage /> },
     ],

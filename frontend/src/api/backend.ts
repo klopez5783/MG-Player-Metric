@@ -6,6 +6,34 @@ export interface CreateEvaluationResponse {
 
 export type Role = 'coach' | 'player'
 
+export interface SubAttributeRatingResponse {
+  subAttributeId: number
+  name: string
+  rating: number
+  comment: string | null
+}
+
+export interface AttributeRatingResponse {
+  attributeId: number
+  name: string
+  rating: number | null
+  comment: string | null
+  subAttributes: SubAttributeRatingResponse[]
+}
+
+export interface EvaluationDetailResponse {
+  id: number
+  playerId: string
+  playerName: string | null
+  evaluationDate: string
+  evaluationType: string
+  overallRating: number | null
+  strengths: string | null
+  weaknesses: string | null
+  generalComment: string | null
+  attributes: AttributeRatingResponse[]
+}
+
 export interface SyncUserResponse {
   id: string
   email: string
@@ -167,3 +195,15 @@ export async function getAttributes(accessToken: string): Promise<AttributeRespo
   }
   return res.json()
 } 
+
+export async function getEvaluation(accessToken: string, evaluationId: string): Promise<EvaluationDetailResponse> {
+  const res = await fetch(`${API_URL}/coaches/me/evaluations/${evaluationId}`, {
+    method: 'GET',
+    headers: { Authorization: `Bearer ${accessToken}` },
+  })
+
+  if (!res.ok) {
+    throw new Error(`Failed to fetch evaluation (${res.status})`)
+  }
+  return res.json()
+}

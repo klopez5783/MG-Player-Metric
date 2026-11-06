@@ -1,4 +1,4 @@
-import { useSearchParams } from 'react-router'
+import { Link, useSearchParams } from 'react-router'
 import AppHeader from '../../components/AppHeader'
 import AppFooter from '../../components/AppFooter'
 import { useCoachRoster } from './useCoachRoster'
@@ -43,6 +43,12 @@ export default function PlayerListPage() {
                   {player.team ?? 'No team'} · {player.position ?? 'No position'}
                 </p>
               </div>
+              <Link
+                to={`/coach/players/${player.id}/evaluations`}
+                className="shrink-0 rounded-lg border border-line px-3 py-1.5 text-xs font-medium text-ink transition hover:border-accent hover:text-accent"
+              >
+                View evaluations
+              </Link>
             </li>
           ))}
         </ul>

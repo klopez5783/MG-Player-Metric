@@ -207,3 +207,21 @@ export async function getEvaluation(accessToken: string, evaluationId: string): 
   }
   return res.json()
 }
+export interface EvaluationSummary {
+  id: number
+  evaluationDate: string
+  evaluationType: string
+  overallRating: number | null
+}
+
+export async function getPlayerEvaluations(accessToken: string, playerId: string): Promise<EvaluationSummary[]> {
+  const res = await fetch(`${API_URL}/coaches/me/players/${playerId}/evaluations`, {
+    method: 'GET',
+    headers: { Authorization: `Bearer ${accessToken}` },
+  })
+
+  if (!res.ok) {
+    throw new Error(`Failed to fetch evaluations (${res.status})`)
+  }
+  return res.json()
+}

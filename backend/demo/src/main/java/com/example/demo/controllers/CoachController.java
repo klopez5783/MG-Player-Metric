@@ -27,6 +27,7 @@ import com.example.demo.dto.InviteCodeResponse;
 import com.example.demo.dto.AttributeRatingRequest;
 import com.example.demo.dto.SubAttributeRatingRequest;
 import com.example.demo.dto.EvaluationDetailResponse;
+import com.example.demo.dto.EvaluationSummaryResponse;
 import com.example.demo.dto.AttributeRatingResponse;
 import com.example.demo.dto.SubAttributeRatingResponse;
 import com.example.demo.entities.Coaches;
@@ -182,6 +183,35 @@ public class CoachController {
         return ResponseEntity.ok(new CreateEvaluationResponse(evaluation.getId()));
     }
 
+
+    // Lists one of the coach's players' evaluations, newest first. 404 if the
+    // player doesn't exist, 403 if they belong to another coach.
+    @GetMapping("/me/players/{playerId}/evaluations")
+    @Transactional(readOnly = true)
+    public ResponseEntity<List<EvaluationSummaryResponse>> getPlayerEvaluations(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID playerId) {
+        UUID coachId = UUID.fromString(jwt.getSubject());
+        Players player = playerRepository.findById(playerId).orElse(null);
+        if (player == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
+        if (player.getCoach() == null || !player.getCoach().getId().equals(coachId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
+        List<EvaluationSummaryResponse> evaluations = evaluationRepository
+            .findByPlayerIdOrderByEvaluationDateDescIdDesc(playerId).stream()
+            .map(evaluation -> new EvaluationSummaryResponse(
+                evaluation.getId(),
+                evaluation.getEvaluationDate(),
+                evaluation.getEvaluationType(),
+                evaluation.getOverallRating()
+            ))
+            .toList();
+
+        return ResponseEntity.ok(evaluations);
+    }
 
     // Returns one of the coach's evaluations with its attribute and
     // sub-attribute ratings nested. 404 if it doesn't exist, 403 if another

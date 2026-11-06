@@ -16,6 +16,7 @@ import CoachHome from '../features/home/CoachHome'
 import HomePage from '../features/home/HomePage'
 import PlayerHome from '../features/home/PlayerHome'
 import PlayerListPage from '../features/players/PlayerListPage'
+import PlayerEvaluationsPage from '../features/players/PlayerEvaluationsPage'
 import ProfilePage from '../features/profile/ProfilePage'
 import ProtectedRoute from './ProtectedRoute'
 
@@ -39,6 +40,7 @@ export const router = createBrowserRouter([
       // Coach
       {path : '/coach', element: <CoachHome /> },
       { path: '/coach/players', element: <PlayerListPage /> },
+      { path: '/coach/players/:playerId/evaluations', element: <PlayerEvaluationsPage /> },
       { path: '/coach/drills', element: <DrillLibraryPage /> },
       { path: '/coach/drills/assign', element: <AssignDrillPage /> },
       { path: '/coach/reviews', element: <ReviewQueuePage /> },

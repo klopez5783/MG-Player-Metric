@@ -86,6 +86,10 @@ public class CoachController {
         UUID id = UUID.fromString(jwt.getSubject());
         Coaches coach = coachRepository.findById(id).orElse(null);
 
+        if (coach == null) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
         if (coach.getInviteCode() == null) {
             String inviteCode = generateUniqueCode();
             coach.setInviteCode(inviteCode);

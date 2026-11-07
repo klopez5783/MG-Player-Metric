@@ -47,7 +47,11 @@ function toStats<
 // GET /attributes catalog, add a summary, and POST it as one evaluation.
 export default function StartEvaluationPage() {
   const { roster, loading: rosterLoading } = useCoachRoster();
-  const { catalog } = useAttributeCatalog();
+  const {
+    catalog,
+    loading: catalogLoading,
+    error: catalogError,
+  } = useAttributeCatalog();
   const { session } = useAuth();
   const navigate = useNavigate();
 
@@ -181,6 +185,13 @@ export default function StartEvaluationPage() {
           <p className="text-sm font-medium text-ink">Saving evaluation…</p>
         </div>
       )}
+
+      {saveError && (
+        <div className="border-b border-line bg-red-50 px-4 py-3 text-sm text-red-700">
+          {saveError}
+        </div>
+      )}
+
       <AppHeader />
       <main className="mx-auto max-w-3xl space-y-4 px-4 py-10">
         <h1 className="text-2xl font-semibold text-ink">Start an evaluation</h1>
@@ -255,15 +266,30 @@ export default function StartEvaluationPage() {
           </div>
 
           <div className="mt-6 divide-y divide-line">
-            {skillStats.map((category) => (
-              <div key={category.id} className="pt-6 first:pt-0">
-                <CategoryCardBody
-                  category={category}
-                  subAttributeRatings={subAttributeRatings}
-                  onRate={setSubAttributeRating}
-                />
-              </div>
-            ))}
+            <div className="mt-6 divide-y divide-line">
+              {catalogError ? (
+                <p className="text-sm text-red-400">
+                  Couldn't load the attributes: {catalogError}. Refresh the page
+                  to try again.
+                </p>
+              ) : catalogLoading ? (
+                <p className="text-sm text-ink-mute">Loading attributes…</p>
+              ) : skillStats.length === 0 ? (
+                <p className="text-sm text-ink-mute">
+                  No attributes have been set up yet.
+                </p>
+              ) : (
+                skillStats.map((category) => (
+                  <div key={category.id} className="pt-6 first:pt-0">
+                    <CategoryCardBody
+                      category={category}
+                      subAttributeRatings={subAttributeRatings}
+                      onRate={setSubAttributeRating}
+                    />
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         </section>
 

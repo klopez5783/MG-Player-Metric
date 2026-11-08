@@ -43,9 +43,17 @@ export default function PlayerEvaluationsPage() {
         <Link to="/coach/players" className="text-sm text-ink-mute hover:text-ink">
           ← Players
         </Link>
-        <h1 className="mt-2 text-2xl font-semibold text-ink">
-          {player?.name ?? 'Player'} · Evaluations
-        </h1>
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
+          <h1 className="text-2xl font-semibold text-ink">
+            {player?.name ?? 'Player'} · Evaluations
+          </h1>
+          <Link
+            to={`/coach/evaluations/start?playerId=${playerId}`}
+            className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-ink transition hover:bg-accent-hover active:bg-accent-active"
+          >
+            New evaluation
+          </Link>
+        </div>
 
         {error ? (
           <p className="mt-4 text-sm text-red-400">{error}</p>

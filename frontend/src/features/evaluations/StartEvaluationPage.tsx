@@ -5,7 +5,7 @@ import { useCoachRoster } from "../players/useCoachRoster";
 import { sendEvaluation } from "../../api/backend";
 import { useAuth } from "../../hooks/useAuth";
 import { useAttributeCatalog } from "./useAttributeCatalog";
-import { useNavigate } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 
 // One sub-attribute's input: the slider value (undefined until the coach
 // moves it) and an optional note.
@@ -54,10 +54,14 @@ export default function StartEvaluationPage() {
   } = useAttributeCatalog();
   const { session } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [playerId, setPlayerId] = useState("");
+  // Pre-selected when arriving from a player's page (?playerId=...).
+  const [playerId, setPlayerId] = useState(
+    () => searchParams.get("playerId") ?? "",
+  );
   const [evaluationDate, setEvaluationDate] = useState(() =>
     new Date().toISOString().slice(0, 10),
   );

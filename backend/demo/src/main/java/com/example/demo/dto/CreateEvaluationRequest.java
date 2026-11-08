@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.UUID;
 
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.PastOrPresent;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.DecimalMax;
@@ -13,7 +14,7 @@ import jakarta.validation.Valid;
 
 public record CreateEvaluationRequest(
     @NotNull UUID playerId,
-    @NotNull LocalDate evaluationDate,
+    @NotNull @PastOrPresent LocalDate evaluationDate,
     @NotNull @Pattern(regexp = "initial|monthly|quarterly") String evaluationType,
     @DecimalMin("1") @DecimalMax("10") BigDecimal overallRating,
     String strengths,

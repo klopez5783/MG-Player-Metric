@@ -5,7 +5,7 @@ import { useCoachRoster } from "../players/useCoachRoster";
 import { sendEvaluation } from "../../api/backend";
 import { useAuth } from "../../hooks/useAuth";
 import { useAttributeCatalog } from "./useAttributeCatalog";
-import { useNavigate, useSearchParams } from "react-router";
+import { Link, useNavigate, useSearchParams } from "react-router";
 
 // One sub-attribute's input: the slider value (undefined until the coach
 // moves it) and an optional note.
@@ -15,6 +15,15 @@ interface RatingEntry {
 }
 
 const emptyEntry: RatingEntry = { rating: undefined, comment: "" };
+
+// Today's date as "YYYY-MM-DD" in the coach's own timezone. toISOString()
+// would give the UTC date, which is already tomorrow on a US evening.
+function todayLocal(): string {
+  const now = new Date();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${now.getFullYear()}-${month}-${day}`;
+}
 
 // Mean rounded to one decimal; null when there's nothing to average.
 function average(values: number[]): number | null {
@@ -55,16 +64,20 @@ export default function StartEvaluationPage() {
   const { session } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  // The player whose page the coach came from, if any. Kept separate from
+  // the dropdown so the back link doesn't change when another player is picked.
+  const fromPlayerId = searchParams.get("playerId");
+  const fromPlayer = roster.find((p) => p.id === fromPlayerId);
+  
 
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   // Pre-selected when arriving from a player's page (?playerId=...).
-  const [playerId, setPlayerId] = useState(
-    () => searchParams.get("playerId") ?? "",
-  );
-  const [evaluationDate, setEvaluationDate] = useState(() =>
-    new Date().toISOString().slice(0, 10),
-  );
+  const [playerId, setPlayerId] = useState(() => fromPlayerId ?? "");
+  // const [evaluationDate, setEvaluationDate] = useState(() =>
+  //   new Date().toISOString().slice(0, 10),
+  // );
+  const [evaluationDate, setEvaluationDate] = useState(todayLocal);
   const [evaluationType, setEvaluationType] = useState("initial");
 
   // Every rating on the form, keyed by sub-attribute id.
@@ -107,11 +120,13 @@ export default function StartEvaluationPage() {
     return average(present);
   }, [skillStats]);
 
-  // Save stays disabled until a player and date are chosen and every
-  // sub-attribute has a rating. Notes and the summary are optional.
+  // Save stays disabled until a player and a date (not in the future) are
+  // chosen and every sub-attribute has a rating. Notes and the summary are
+  // optional. "YYYY-MM-DD" strings compare correctly as plain strings.
   const canSave =
     playerId !== "" &&
     evaluationDate !== "" &&
+    evaluationDate <= todayLocal() &&
     skillStats.length > 0 &&
     skillStats.every((c) => c.ratedCount === c.totalCount);
 
@@ -156,7 +171,9 @@ export default function StartEvaluationPage() {
     setSaveError(null);
     try {
       const { id } = await sendEvaluation(session.access_token, payload);
-      navigate(`/coach/evaluations/${id}`);
+      // Replace the form in history so Back from the saved evaluation
+      // doesn't return to an empty form.
+      navigate(`/coach/evaluations/${id}`, { replace: true });
     } catch (error) {
       setSaveError(
         error instanceof Error ? error.message : "Failed to save evaluation",
@@ -198,6 +215,20 @@ export default function StartEvaluationPage() {
 
       <AppHeader />
       <main className="mx-auto max-w-3xl space-y-4 px-4 py-10">
+        {/* Back to the player's evaluations when started from there,
+            otherwise back to the coach home page. */}
+        {fromPlayerId ? (
+          <Link
+            to={`/coach/players/${fromPlayerId}/evaluations`}
+            className="text-sm text-ink-mute hover:text-ink"
+          >
+            ← {fromPlayer?.name ?? "Player"}'s evaluations
+          </Link>
+        ) : (
+          <Link to="/coach" className="text-sm text-ink-mute hover:text-ink">
+            ← Home
+          </Link>
+        )}
         <h1 className="text-2xl font-semibold text-ink">Start an evaluation</h1>
 
         {/* Part 1: Player information */}
@@ -226,6 +257,7 @@ export default function StartEvaluationPage() {
               <input
                 type="date"
                 value={evaluationDate}
+                max={todayLocal()}
                 onChange={(e) => setEvaluationDate(e.target.value)}
                 className={fieldClass}
               />

@@ -25,34 +25,35 @@ function tabsFor(role: Role | undefined) {
 }
 
 // The primary navigation, placed at the bottom of the page like a mobile
-// app's tab bar. Sticks to the viewport bottom so it stays reachable on a
-// long page; each page adds bottom padding to its content so nothing sits
-// underneath it.
+// app's tab bar. Fixed to the bottom of the screen on every page, short or
+// long. A spacer of the same height (h-12) sits where the footer would be,
+// so the end of the page can still scroll out from underneath it.
 export default function AppFooter() {
   const { me } = useAuth()
   const tabs = tabsFor(me?.role)
   if (!tabs) return null
 
   return (
-    <footer className="sticky bottom-0 border-t border-line bg-canvas" aria-label="Primary">
-      <nav className="mx-auto flex max-w-5xl" aria-label="Primary">
-        {tabs.map((tab) => (
-          <NavLink
-            key={tab.to}
-            to={tab.to}
-            end={tab.to === '/coach' || tab.to === '/player'}
-            className={({ isActive }) =>
-              `flex-1 border-t-2 px-2 py-3 text-center text-sm font-medium transition ${
-                isActive
-                  ? 'border-accent text-ink'
-                  : 'border-transparent text-ink-mute hover:text-ink-soft'
-              }`
-            }
-          >
-            {tab.label}
-          </NavLink>
-        ))}
-      </nav>
-    </footer>
+    <>
+      <div className="h-12" aria-hidden="true" />
+      <footer className="fixed inset-x-0 bottom-0 z-40 h-12 border-t border-line bg-canvas">
+        <nav className="mx-auto flex h-full max-w-5xl" aria-label="Primary">
+          {tabs.map((tab) => (
+            <NavLink
+              key={tab.to}
+              to={tab.to}
+              end={tab.to === '/coach' || tab.to === '/player'}
+              className={({ isActive }) =>
+                `flex flex-1 items-center justify-center border-t-2 px-2 text-sm font-medium transition ${
+                  isActive ? 'border-accent text-ink' : 'border-transparent text-ink-mute hover:text-ink-soft'
+                }`
+              }
+            >
+              {tab.label}
+            </NavLink>
+          ))}
+        </nav>
+      </footer>
+    </>
   )
 }

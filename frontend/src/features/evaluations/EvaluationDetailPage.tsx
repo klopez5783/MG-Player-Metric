@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router'
+import { Link, useNavigate, useParams } from 'react-router'
 import AppHeader from '../../components/AppHeader'
 import AppFooter from '../../components/AppFooter'
 import {
@@ -68,6 +68,15 @@ export default function EvaluationDetailPage() {
           <p className="text-sm text-ink-mute">Loading evaluation…</p>
         ) : (
           <>
+            {/* Back to this player's evaluation list. A fixed link rather than
+                history back, so it works when arriving straight from saving. */}
+            <Link
+              to={`/coach/players/${evaluation.playerId}/evaluations`}
+              className="inline-block text-sm text-ink-mute hover:text-ink"
+            >
+              ← Back to evaluations
+            </Link>
+
             {/* Header: who, when, what kind, overall score */}
             <section className="rounded-2xl border border-line bg-surface p-6">
               <div className="flex flex-wrap items-start justify-between gap-4">

@@ -35,7 +35,7 @@ export const router = createBrowserRouter([
       { path: '/player/drills', element: <PlayerDrillsPage /> },
       { path: '/player/drills/:drillId', element: <DrillDetailPage /> },
       { path: '/player/feedback', element: <FeedbackHistoryPage /> },
-      { path: '/players/attributes/:attributeKey', element: <AttributeDetailPage /> },
+      { path: '/players/attributes/:attributeId', element: <AttributeDetailPage /> },
 
       // Coach
       {path : '/coach', element: <CoachHome /> },

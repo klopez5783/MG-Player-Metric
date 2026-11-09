@@ -3,8 +3,6 @@ package com.example.demo.controllers;
 import java.security.SecureRandom;
 import java.util.UUID;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 import jakarta.validation.Valid;
 
@@ -29,8 +27,6 @@ import com.example.demo.dto.AttributeRatingRequest;
 import com.example.demo.dto.SubAttributeRatingRequest;
 import com.example.demo.dto.EvaluationDetailResponse;
 import com.example.demo.dto.EvaluationSummaryResponse;
-import com.example.demo.dto.AttributeRatingResponse;
-import com.example.demo.dto.SubAttributeRatingResponse;
 import com.example.demo.entities.Coaches;
 import com.example.demo.entities.Players;
 import com.example.demo.entities.Evaluation;
@@ -46,6 +42,7 @@ import com.example.demo.repositories.AttributeRatingRepository;
 import com.example.demo.repositories.SubAttributeRepository;
 import com.example.demo.repositories.SubAttributeRatingRepository;
 import com.example.demo.dto.RosterPlayerResponse;
+import com.example.demo.services.EvaluationDetailService;
 
 
 @RestController
@@ -62,6 +59,7 @@ public class CoachController {
     private final AttributeRatingRepository attributeRatingRepository;
     private final SubAttributeRepository subAttributeRepository;
     private final SubAttributeRatingRepository subAttributeRatingRepository;
+    private final EvaluationDetailService evaluationDetailService;
 
     public CoachController(
             CoachRepository coachRepository,
@@ -70,7 +68,8 @@ public class CoachController {
             AttributeRepository attributeRepository,
             AttributeRatingRepository attributeRatingRepository,
             SubAttributeRepository subAttributeRepository,
-            SubAttributeRatingRepository subAttributeRatingRepository) {
+            SubAttributeRatingRepository subAttributeRatingRepository,
+            EvaluationDetailService evaluationDetailService) {
         this.coachRepository = coachRepository;
         this.playerRepository = playerRepository;
         this.evaluationRepository = evaluationRepository;
@@ -78,6 +77,7 @@ public class CoachController {
         this.attributeRatingRepository = attributeRatingRepository;
         this.subAttributeRepository = subAttributeRepository;
         this.subAttributeRatingRepository = subAttributeRatingRepository;
+        this.evaluationDetailService = evaluationDetailService;
     }
 
     // Returns the coach's invite code, generating and saving one the first time.
@@ -220,8 +220,7 @@ public class CoachController {
 
     // Returns one of the coach's evaluations with its attribute and
     // sub-attribute ratings nested. 404 if it doesn't exist, 403 if another
-    // coach wrote it. Three queries: the evaluation, its attribute ratings,
-    // and all of its sub-attribute ratings, grouped here.
+    // coach wrote it. The nesting is built by EvaluationDetailService.
     @GetMapping("/me/evaluations/{evaluationId}")
     @Transactional(readOnly = true)
     public ResponseEntity<EvaluationDetailResponse> getEvaluationDetail(
@@ -236,45 +235,7 @@ public class CoachController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
 
-        Map<Integer, List<SubAttributeRatingResponse>> subRatingsByAttributeRating =
-            subAttributeRatingRepository.findByAttributeRatingEvaluationIdOrderBySubAttributeDisplayOrderAsc(evaluationId).stream()
-                .collect(Collectors.groupingBy(
-                    sub -> sub.getAttributeRating().getId(),
-                    Collectors.mapping(
-                        sub -> new SubAttributeRatingResponse(
-                            sub.getSubAttribute().getId(),
-                            sub.getSubAttribute().getName(),
-                            sub.getRating(),
-                            sub.getComment()
-                        ),
-                        Collectors.toList()
-                    )
-                ));
-
-        List<AttributeRatingResponse> attributes =
-            attributeRatingRepository.findByEvaluationIdOrderByAttributeDisplayOrderAsc(evaluationId).stream()
-                .map(rating -> new AttributeRatingResponse(
-                    rating.getAttribute().getId(),
-                    rating.getAttribute().getName(),
-                    rating.getRating(),
-                    rating.getComment(),
-                    subRatingsByAttributeRating.getOrDefault(rating.getId(), List.of())
-                ))
-                .toList();
-
-        Players player = evaluation.getPlayer();
-        return ResponseEntity.ok(new EvaluationDetailResponse(
-            evaluation.getId(),
-            player.getId(),
-            player.getUser().getName(),
-            evaluation.getEvaluationDate(),
-            evaluation.getEvaluationType(),
-            evaluation.getOverallRating(),
-            evaluation.getStrengths(),
-            evaluation.getWeaknesses(),
-            evaluation.getGeneralComment(),
-            attributes
-        ));
+        return ResponseEntity.ok(evaluationDetailService.build(evaluation));
     }
 
 

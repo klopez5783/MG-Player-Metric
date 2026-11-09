@@ -208,6 +208,21 @@ export async function getEvaluation(accessToken: string, evaluationId: string): 
   return res.json()
 }
 
+// The logged-in player's most recent evaluation, or null if they don't have
+// one yet (the backend answers 204 No Content).
+export async function getMyLatestEvaluation(accessToken: string): Promise<EvaluationDetailResponse | null> {
+  const res = await fetch(`${API_URL}/players/me/evaluations/latest`, {
+    method: 'GET',
+    headers: { Authorization: `Bearer ${accessToken}` },
+  })
+
+  if (res.status === 204) return null
+  if (!res.ok) {
+    throw new Error(`Failed to fetch your evaluation (${res.status})`)
+  }
+  return res.json()
+}
+
 export async function deleteEvaluation(accessToken: string, evaluationId: string): Promise<void> {
   const res = await fetch(`${API_URL}/coaches/me/evaluations/${evaluationId}`, {
     method: 'DELETE',

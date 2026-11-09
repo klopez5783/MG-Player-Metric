@@ -8,7 +8,8 @@ import AttributeGrid from '../evaluations/AttributeGrid'
 import StrengthsWeaknesses from '../evaluations/StrengthsWeaknesses'
 import FeedbackBanner from '../evaluations/FeedbackBanner'
 import ActiveDrills from '../drills/ActiveDrills'
-import type { CoachFeedback, Drill, Evaluation } from '../evaluations/types'
+import { useMyLatestEvaluation } from '../evaluations/useMyLatestEvaluation'
+import type { CoachFeedback, Drill } from '../evaluations/types'
 
 export default function PlayerHome() {
   const { me } = useAuth()
@@ -25,21 +26,22 @@ export default function PlayerHome() {
   )
 }
 
-// TODO: replace these with real fetches once evaluations, drills and coach
-// feedback have backend endpoints.
-function getEvaluation(): Evaluation | null {
-  return null
-}
-
+// The evaluation is loaded once here and passed down to each section.
+// TODO: replace drills and feedback with real fetches once they have
+// backend endpoints.
 function PlayerDashboard() {
   const { me } = useAuth()
-  const evaluation = getEvaluation()
+  const { evaluation, loading, error } = useMyLatestEvaluation()
   const drills: Drill[] = []
   const feedback: CoachFeedback[] = []
 
   return (
     <>
-      {evaluation ? (
+      {loading ? (
+        <p className="text-sm text-ink-mute">Loading your evaluation…</p>
+      ) : error ? (
+        <p className="text-sm text-red-400">{error}</p>
+      ) : evaluation ? (
         <>
           <PlayerSnapshot name={me?.name ?? 'Player'} evaluation={evaluation} />
 

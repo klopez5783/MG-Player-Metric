@@ -1,8 +1,10 @@
 import RadarChart from '../evaluations/RadarChart'
-import type { Evaluation } from '../evaluations/types'
+import type { EvaluationDetailResponse } from '../../api/backend'
 import { scoreTier } from '../evaluations/scoreTier'
 
-export default function PlayerSnapshot({ name, evaluation }: { name: string; evaluation: Evaluation }) {
+// Ratings are 1–10; scoreTier works on 0–100, so scores are multiplied by 10
+// for the color only.
+export default function PlayerSnapshot({ name, evaluation }: { name: string; evaluation: EvaluationDetailResponse }) {
   const initials = name
     .split(' ')
     .map((part) => part[0])
@@ -10,6 +12,9 @@ export default function PlayerSnapshot({ name, evaluation }: { name: string; eva
     .slice(0, 2)
     .join('')
     .toUpperCase()
+
+  const overall = evaluation.overallRating
+  const radarAttributes = evaluation.attributes.map((a) => ({ label: a.name, score: a.rating ?? 0 }))
 
   return (
     <div className="rounded-2xl border border-line bg-surface p-6">
@@ -21,16 +26,16 @@ export default function PlayerSnapshot({ name, evaluation }: { name: string; eva
           <div>
             <h1 className="text-xl font-semibold text-ink">{name}</h1>
             <p className="text-sm text-ink-mute">
-              Last evaluated {new Date(evaluation.date).toLocaleDateString()}
+              Last evaluated {new Date(evaluation.evaluationDate).toLocaleDateString()}
             </p>
-            <p className={`mt-1 text-3xl font-bold ${scoreTier(evaluation.overallRating).text}`}>
-              {evaluation.overallRating}
+            <p className={`mt-1 text-3xl font-bold ${overall != null ? scoreTier(overall * 10).text : 'text-ink-mute'}`}>
+              {overall ?? '—'}
               <span className="ml-1 text-sm font-medium text-ink-mute">Overall</span>
             </p>
           </div>
         </div>
 
-        <RadarChart attributes={evaluation.attributes} />
+        {radarAttributes.length >= 3 && <RadarChart attributes={radarAttributes} max={10} />}
       </div>
     </div>
   )

@@ -1,32 +1,6 @@
-// Shapes for a player's evaluation data. No backend endpoint exists for any
-// of this yet (there's no evaluations/attributes/drills table), so every
-// screen that uses these types currently renders an empty/zero state.
-
-export interface SubAttribute {
-  label: string
-  score: number // 0-100
-}
-
-export interface MajorAttribute {
-  key: string
-  label: string
-  score: number // 0-100, the average of its sub-attributes
-  subAttributes: SubAttribute[]
-}
-
-export interface StrengthWeakness {
-  attributeKey: string
-  label: string
-  note: string
-}
-
-export interface Evaluation {
-  date: string // ISO date
-  overallRating: number // 0-100
-  attributes: MajorAttribute[]
-  strengths: StrengthWeakness[]
-  weaknesses: StrengthWeakness[]
-}
+// Placeholder shapes for drills, coach feedback and video reviews. None of
+// these have a backend endpoint yet, so screens using them render an empty
+// state. Evaluation data uses the real types in api/backend.ts.
 
 export type DrillStatus = 'not_started' | 'submitted' | 'needs_video'
 

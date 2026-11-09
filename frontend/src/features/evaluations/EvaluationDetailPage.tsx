@@ -1,8 +1,13 @@
 import { useEffect, useState } from 'react'
-import { useParams } from 'react-router'
+import { useNavigate, useParams } from 'react-router'
 import AppHeader from '../../components/AppHeader'
 import AppFooter from '../../components/AppFooter'
-import { getEvaluation, type AttributeRatingResponse, type EvaluationDetailResponse } from '../../api/backend'
+import {
+  deleteEvaluation,
+  getEvaluation,
+  type AttributeRatingResponse,
+  type EvaluationDetailResponse,
+} from '../../api/backend'
 import { useAuth } from '../../hooks/useAuth'
 import { scoreTier } from './scoreTier'
 
@@ -14,6 +19,27 @@ export default function EvaluationDetailPage() {
   const { session } = useAuth()
   const [evaluation, setEvaluation] = useState<EvaluationDetailResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const navigate = useNavigate()
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+
+  // Asks for confirmation, deletes the evaluation, then goes to the player's
+  // evaluation list. Replaces this page in history so Back doesn't return to
+  // an evaluation that no longer exists.
+  async function handleDelete() {
+    if (!session || !evaluationId || !evaluation) return
+    if (!window.confirm('Delete this evaluation? This cannot be undone.')) return
+
+    setDeleting(true)
+    setDeleteError(null)
+    try {
+      await deleteEvaluation(session.access_token, evaluationId)
+      navigate(`/coach/players/${evaluation.playerId}/evaluations`, { replace: true })
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : 'Could not delete this evaluation.')
+      setDeleting(false)
+    }
+  }
 
   useEffect(() => {
     if (!session || !evaluationId) return
@@ -77,6 +103,19 @@ export default function EvaluationDetailPage() {
                 <SummaryItem label="General comment" value={evaluation.generalComment} />
               </dl>
             </section>
+
+            {/* Delete, kept at the bottom and away from everyday actions */}
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={deleting}
+                className="rounded-lg border border-red-400 px-4 py-2 text-sm font-medium text-red-400 transition hover:bg-red-400 hover:text-canvas disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {deleting ? 'Deleting…' : 'Delete evaluation'}
+              </button>
+              {deleteError && <p className="text-sm text-red-400">{deleteError}</p>}
+            </div>
           </>
         )}
       </main>

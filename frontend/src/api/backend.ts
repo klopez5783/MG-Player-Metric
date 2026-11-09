@@ -207,6 +207,14 @@ export async function getEvaluation(accessToken: string, evaluationId: string): 
   }
   return res.json()
 }
+
+export async function deleteEvaluation(accessToken: string, evaluationId: string): Promise<void> {
+  const res = await fetch(`${API_URL}/coaches/me/evaluations/${evaluationId}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${accessToken}` },
+  })
+  if (!res.ok) throw new Error(`Failed to delete evaluation (${res.status})`)
+}
 export interface EvaluationSummary {
   id: number
   evaluationDate: string

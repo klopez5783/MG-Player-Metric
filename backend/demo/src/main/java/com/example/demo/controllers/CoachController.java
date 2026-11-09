@@ -13,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -277,6 +278,33 @@ public class CoachController {
     }
 
 
+
+    // Deletes one of the coach's evaluations with all of its ratings. 404 if
+    // it doesn't exist, 403 if another coach wrote it. The tables have no
+    // ON DELETE CASCADE, so children go first: sub-attribute ratings, then
+    // attribute ratings, then the evaluation.
+    @DeleteMapping("/me/evaluations/{evaluationId}")
+    @Transactional
+    public ResponseEntity<Void> deleteEvaluation(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable Integer evaluationId) {
+        UUID coachId = UUID.fromString(jwt.getSubject());
+        Evaluation evaluation = evaluationRepository.findById(evaluationId).orElse(null);
+        if (evaluation == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
+        if (!evaluation.getCoach().getId().equals(coachId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
+        subAttributeRatingRepository.deleteAll(
+            subAttributeRatingRepository.findByAttributeRatingEvaluationIdOrderBySubAttributeDisplayOrderAsc(evaluationId));
+        attributeRatingRepository.deleteAll(
+            attributeRatingRepository.findByEvaluationIdOrderByAttributeDisplayOrderAsc(evaluationId));
+        evaluationRepository.delete(evaluation);
+
+        return ResponseEntity.noContent().build();
+    }
 
     // Keeps generating codes until one isn't already taken by another coach.
     private String generateUniqueCode() {

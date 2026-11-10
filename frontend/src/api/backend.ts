@@ -72,6 +72,32 @@ export interface SubAttributeResponse {
   name: string
 }
 
+// Matches the CHECK constraint on drills.difficulty.
+export type DrillDifficulty = 'beginner' | 'intermediate' | 'advanced'
+
+// A sub-attribute a drill trains, with its parent attribute's name.
+export interface DrillSubAttributeResponse {
+  id: number
+  name: string
+  attributeName: string
+}
+
+// One drill in the coach's library (GET /coaches/me/drills). custom is true
+// for the coach's own drills, false for built-in ones.
+export interface DrillResponse {
+  id: number
+  name: string
+  description: string | null
+  instructions: string | null
+  durationMinutes: number | null
+  difficulty: DrillDifficulty | null
+  equipment: string | null
+  demoVideoUrl: string | null
+  requiresVideo: boolean
+  custom: boolean
+  subAttributes: DrillSubAttributeResponse[]
+}
+
 export async function syncUser(accessToken: string, role: Role, name?: string): Promise<SyncUserResponse> {
   const res = await fetch(`${API_URL}/users/sync`, {
     method: 'POST',
@@ -245,6 +271,18 @@ export async function getPlayerEvaluations(accessToken: string, playerId: string
 
   if (!res.ok) {
     throw new Error(`Failed to fetch evaluations (${res.status})`)
+  }
+  return res.json()
+}
+
+export async function getDrills(accessToken: string): Promise<DrillResponse[]> {
+  const res = await fetch(`${API_URL}/coaches/me/drills`, {
+    method: 'GET',
+    headers: { Authorization: `Bearer ${accessToken}` },
+  })
+
+  if (!res.ok) {
+    throw new Error(`Failed to fetch drills (${res.status})`)
   }
   return res.json()
 }

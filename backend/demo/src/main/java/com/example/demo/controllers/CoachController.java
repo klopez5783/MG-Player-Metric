@@ -2,6 +2,7 @@ package com.example.demo.controllers;
 
 import java.security.SecureRandom;
 import java.util.UUID;
+import java.util.Comparator;
 import java.util.List;
 
 import jakarta.validation.Valid;
@@ -42,6 +43,9 @@ import com.example.demo.repositories.AttributeRatingRepository;
 import com.example.demo.repositories.SubAttributeRepository;
 import com.example.demo.repositories.SubAttributeRatingRepository;
 import com.example.demo.dto.RosterPlayerResponse;
+import com.example.demo.dto.DrillResponse;
+import com.example.demo.dto.DrillSubAttributeResponse;
+import com.example.demo.repositories.DrillRepository;
 import com.example.demo.services.EvaluationDetailService;
 
 
@@ -60,6 +64,7 @@ public class CoachController {
     private final SubAttributeRepository subAttributeRepository;
     private final SubAttributeRatingRepository subAttributeRatingRepository;
     private final EvaluationDetailService evaluationDetailService;
+    private final DrillRepository drillRepository;
 
     public CoachController(
             CoachRepository coachRepository,
@@ -69,7 +74,8 @@ public class CoachController {
             AttributeRatingRepository attributeRatingRepository,
             SubAttributeRepository subAttributeRepository,
             SubAttributeRatingRepository subAttributeRatingRepository,
-            EvaluationDetailService evaluationDetailService) {
+            EvaluationDetailService evaluationDetailService,
+            DrillRepository drillRepository) {
         this.coachRepository = coachRepository;
         this.playerRepository = playerRepository;
         this.evaluationRepository = evaluationRepository;
@@ -78,6 +84,7 @@ public class CoachController {
         this.subAttributeRepository = subAttributeRepository;
         this.subAttributeRatingRepository = subAttributeRatingRepository;
         this.evaluationDetailService = evaluationDetailService;
+        this.drillRepository = drillRepository;
     }
 
     // Returns the coach's invite code, generating and saving one the first time.
@@ -118,6 +125,44 @@ public class CoachController {
             .toList();
 
         return ResponseEntity.ok(players);
+    }
+
+    // The coach's drill library: every built-in drill plus their own, minus
+    // archived ones. One query, with sub-attributes listed in the same order
+    // as the evaluation form. 403 if the caller isn't a coach.
+    @GetMapping("/me/drills")
+    public ResponseEntity<List<DrillResponse>> myDrills(@AuthenticationPrincipal Jwt jwt) {
+        UUID id = UUID.fromString(jwt.getSubject());
+        if (!coachRepository.existsById(id)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
+        List<DrillResponse> drills = drillRepository.findLibraryForCoach(id).stream()
+            .map(drill -> new DrillResponse(
+                drill.getId(),
+                drill.getName(),
+                drill.getDescription(),
+                drill.getInstructions(),
+                drill.getDurationMinutes(),
+                drill.getDifficulty(),
+                drill.getEquipment(),
+                drill.getDemoVideoUrl(),
+                drill.isRequiresVideo(),
+                drill.getCoach() != null,
+                drill.getSubAttributes().stream()
+                    .sorted(Comparator
+                        .comparing((SubAttribute sub) -> sub.getAttribute().getDisplayOrder())
+                        .thenComparing(SubAttribute::getDisplayOrder))
+                    .map(sub -> new DrillSubAttributeResponse(
+                        sub.getId(),
+                        sub.getName(),
+                        sub.getAttribute().getName()
+                    ))
+                    .toList()
+            ))
+            .toList();
+
+        return ResponseEntity.ok(drills);
     }
 
     // Saves an evaluation for one of the coach's own players, then a rating

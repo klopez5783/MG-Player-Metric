@@ -275,6 +275,33 @@ export async function getPlayerEvaluations(accessToken: string, playerId: string
   return res.json()
 }
 
+export interface AssignDrillRequest {
+  drillId: number
+  playerId: string
+  dueDate: string | null
+  coachNote: string | null
+}
+
+export interface AssignDrillResponse {
+  id: number
+}
+
+export async function assignDrill(accessToken: string, request: AssignDrillRequest): Promise<AssignDrillResponse> {
+  const res = await fetch(`${API_URL}/coaches/me/drill-assignments`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(request),
+  })
+
+  if (!res.ok) {
+    throw new Error(`Failed to assign drill (${res.status})`)
+  }
+  return res.json()
+}
+
 export async function getDrills(accessToken: string): Promise<DrillResponse[]> {
   const res = await fetch(`${API_URL}/coaches/me/drills`, {
     method: 'GET',

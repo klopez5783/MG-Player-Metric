@@ -1,39 +1,13 @@
 import { Link } from 'react-router'
 import AppHeader from '../../components/AppHeader'
 import AppFooter from '../../components/AppFooter'
-import { getDrills, type DrillResponse } from '../../api/backend'
-import { useState, useEffect } from 'react'
-import { useAuth } from '../../hooks/useAuth'
+import { useDrillLibrary } from './useDrillLibrary'
 
 
 // TODO: fetch from a real drill-library endpoint, and wire "Assign" through
 // to /coach/drills/assign with the drill pre-selected.
 export default function DrillLibraryPage() {
-  const { session } = useAuth()
-  const [drills, setDrills] = useState<DrillResponse[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (!session) return
-    let cancelled = false
-
-    getDrills(session.access_token)
-      .then((data) => {
-        if (!cancelled) setDrills(data)
-      })
-      .catch((err) => {
-        if (!cancelled) setError(err instanceof Error ? err.message : 'Could not load drills.')
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false)
-      })
-
-    return () => {
-      cancelled = true
-    }
-  }, [session])
-  
+  const { drills, loading, error } = useDrillLibrary()
 
 
   return (

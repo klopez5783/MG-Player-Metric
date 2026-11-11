@@ -13,9 +13,9 @@ export interface AssignedDrillResponse {
   requiresVideo: boolean
   playerId: string
   playerName: string
-  dueDate: string
-  status: string
-  coachNote: string
+  dueDate: string | null
+  status: 'assigned' | 'submitted' | 'reviewed'
+  coachNote: string | null
   assignedAt: string
   submittedAt: string
   reviewedAt: string

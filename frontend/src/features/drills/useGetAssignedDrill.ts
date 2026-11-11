@@ -2,14 +2,8 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { getAssignedDrills, type AssignedDrillResponse } from '../../api/backend'
 
-// The last library loaded, kept outside React so it survives moving between
-// pages. Tagged with the user id so a different login never sees it.
 let cache: { userId: string; drills: AssignedDrillResponse[] } | null = null
 
-// Shared by DrillLibraryPage and AssignDrillPage — both need the coach's
-// drill library (GET /coaches/me/drills), fetched the same way. The first
-// page fetches and shows a loading state; later pages render the cached
-// library straight away and refetch quietly in the background.
 export function useAssignedDrills() {
   const { session } = useAuth()
   const userId = session?.user.id

@@ -16,4 +16,8 @@ public interface DrillAssignmentRepository extends JpaRepository<DrillAssignment
     // player's name (player -> user) joined in.
     @EntityGraph(attributePaths = {"drill", "player", "player.user"})
     List<DrillAssignment> findByCoachIdOrderByAssignedAtDesc(UUID coachId);
+
+    // Whether the player already has this drill in the given status, e.g.
+    // "assigned" to block giving them the same open drill twice.
+    boolean existsByDrillIdAndPlayerIdAndStatus(Integer drillId, UUID playerId, String status);
 }

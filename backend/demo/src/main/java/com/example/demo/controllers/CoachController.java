@@ -25,6 +25,8 @@ import com.example.demo.dto.CreateEvaluationRequest;
 import com.example.demo.dto.CreateEvaluationResponse;
 import com.example.demo.dto.InviteCodeResponse;
 import com.example.demo.dto.AttributeRatingRequest;
+import com.example.demo.dto.CreateDrillAssignmentRequest;
+import com.example.demo.dto.CreateDrillAssignmentResponse;
 import com.example.demo.dto.SubAttributeRatingRequest;
 import com.example.demo.dto.EvaluationDetailResponse;
 import com.example.demo.dto.EvaluationSummaryResponse;
@@ -35,6 +37,8 @@ import com.example.demo.entities.Attribute;
 import com.example.demo.entities.AttributeRating;
 import com.example.demo.entities.SubAttribute;
 import com.example.demo.entities.SubAttributeRating;
+import com.example.demo.entities.Drill;
+import com.example.demo.entities.DrillAssignment;
 import com.example.demo.repositories.CoachRepository;
 import com.example.demo.repositories.PlayerRepository;
 import com.example.demo.repositories.EvaluationRepository;
@@ -46,8 +50,8 @@ import com.example.demo.dto.RosterPlayerResponse;
 import com.example.demo.dto.DrillResponse;
 import com.example.demo.dto.DrillSubAttributeResponse;
 import com.example.demo.repositories.DrillRepository;
+import com.example.demo.repositories.DrillAssignmentRepository;
 import com.example.demo.services.EvaluationDetailService;
-
 
 @RestController
 @RequestMapping("/coaches")
@@ -65,8 +69,10 @@ public class CoachController {
     private final SubAttributeRatingRepository subAttributeRatingRepository;
     private final EvaluationDetailService evaluationDetailService;
     private final DrillRepository drillRepository;
+    private final DrillAssignmentRepository drillAssignmentRepository;
 
     public CoachController(
+            DrillAssignmentRepository drillAssignmentRepository,
             CoachRepository coachRepository,
             PlayerRepository playerRepository,
             EvaluationRepository evaluationRepository,
@@ -85,6 +91,7 @@ public class CoachController {
         this.subAttributeRatingRepository = subAttributeRatingRepository;
         this.evaluationDetailService = evaluationDetailService;
         this.drillRepository = drillRepository;
+        this.drillAssignmentRepository = drillAssignmentRepository;
     }
 
     // Returns the coach's invite code, generating and saving one the first time.
@@ -116,13 +123,12 @@ public class CoachController {
         }
 
         List<RosterPlayerResponse> players = playerRepository.findByCoachId(id).stream()
-            .map(player -> new RosterPlayerResponse(
-                player.getId(),
-                player.getUser().getName(),
-                player.getTeam(),
-                player.getPosition()
-            ))
-            .toList();
+                .map(player -> new RosterPlayerResponse(
+                        player.getId(),
+                        player.getUser().getName(),
+                        player.getTeam(),
+                        player.getPosition()))
+                .toList();
 
         return ResponseEntity.ok(players);
     }
@@ -138,29 +144,27 @@ public class CoachController {
         }
 
         List<DrillResponse> drills = drillRepository.findLibraryForCoach(id).stream()
-            .map(drill -> new DrillResponse(
-                drill.getId(),
-                drill.getName(),
-                drill.getDescription(),
-                drill.getInstructions(),
-                drill.getDurationMinutes(),
-                drill.getDifficulty(),
-                drill.getEquipment(),
-                drill.getDemoVideoUrl(),
-                drill.isRequiresVideo(),
-                drill.getCoach() != null,
-                drill.getSubAttributes().stream()
-                    .sorted(Comparator
-                        .comparing((SubAttribute sub) -> sub.getAttribute().getDisplayOrder())
-                        .thenComparing(SubAttribute::getDisplayOrder))
-                    .map(sub -> new DrillSubAttributeResponse(
-                        sub.getId(),
-                        sub.getName(),
-                        sub.getAttribute().getName()
-                    ))
-                    .toList()
-            ))
-            .toList();
+                .map(drill -> new DrillResponse(
+                        drill.getId(),
+                        drill.getName(),
+                        drill.getDescription(),
+                        drill.getInstructions(),
+                        drill.getDurationMinutes(),
+                        drill.getDifficulty(),
+                        drill.getEquipment(),
+                        drill.getDemoVideoUrl(),
+                        drill.isRequiresVideo(),
+                        drill.getCoach() != null,
+                        drill.getSubAttributes().stream()
+                                .sorted(Comparator
+                                        .comparing((SubAttribute sub) -> sub.getAttribute().getDisplayOrder())
+                                        .thenComparing(SubAttribute::getDisplayOrder))
+                                .map(sub -> new DrillSubAttributeResponse(
+                                        sub.getId(),
+                                        sub.getName(),
+                                        sub.getAttribute().getName()))
+                                .toList()))
+                .toList();
 
         return ResponseEntity.ok(drills);
     }
@@ -173,7 +177,7 @@ public class CoachController {
     public ResponseEntity<CreateEvaluationResponse> createEvaluation(
             @AuthenticationPrincipal Jwt jwt,
             @Valid @RequestBody CreateEvaluationRequest request) {
-            System.out.println("Received request: " + request);
+        System.out.println("Received request: " + request);
         UUID coachId = UUID.fromString(jwt.getSubject());
         Coaches coach = coachRepository.findById(coachId).orElse(null);
         if (coach == null) {
@@ -199,12 +203,12 @@ public class CoachController {
         evaluation.setGeneralComment(request.generalComment());
         evaluationRepository.save(evaluation);
 
-        
         for (AttributeRatingRequest attrRequest : request.attributes()) {
             Attribute attribute = attributeRepository.findById(attrRequest.attributeId()).orElse(null);
             if (attribute == null) {
                 System.out.println("Attribute not found: " + attrRequest.attributeId());
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unknown attribute id: " + attrRequest.attributeId());
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Unknown attribute id: " + attrRequest.attributeId());
             }
 
             AttributeRating attributeRating = new AttributeRating();
@@ -217,7 +221,8 @@ public class CoachController {
             for (SubAttributeRatingRequest subRequest : attrRequest.subAttributes()) {
                 SubAttribute subAttribute = subAttributeRepository.findById(subRequest.subAttributeId()).orElse(null);
                 if (subAttribute == null) {
-                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unknown sub-attribute id: " + subRequest.subAttributeId());
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                            "Unknown sub-attribute id: " + subRequest.subAttributeId());
                 }
 
                 SubAttributeRating subAttributeRating = new SubAttributeRating();
@@ -228,11 +233,9 @@ public class CoachController {
                 subAttributeRatingRepository.save(subAttributeRating);
             }
         }
-        
 
         return ResponseEntity.ok(new CreateEvaluationResponse(evaluation.getId()));
     }
-
 
     // Lists one of the coach's players' evaluations, newest first. 404 if the
     // player doesn't exist, 403 if they belong to another coach.
@@ -251,14 +254,13 @@ public class CoachController {
         }
 
         List<EvaluationSummaryResponse> evaluations = evaluationRepository
-            .findByPlayerIdOrderByEvaluationDateDescIdDesc(playerId).stream()
-            .map(evaluation -> new EvaluationSummaryResponse(
-                evaluation.getId(),
-                evaluation.getEvaluationDate(),
-                evaluation.getEvaluationType(),
-                evaluation.getOverallRating()
-            ))
-            .toList();
+                .findByPlayerIdOrderByEvaluationDateDescIdDesc(playerId).stream()
+                .map(evaluation -> new EvaluationSummaryResponse(
+                        evaluation.getId(),
+                        evaluation.getEvaluationDate(),
+                        evaluation.getEvaluationType(),
+                        evaluation.getOverallRating()))
+                .toList();
 
         return ResponseEntity.ok(evaluations);
     }
@@ -283,8 +285,6 @@ public class CoachController {
         return ResponseEntity.ok(evaluationDetailService.build(evaluation));
     }
 
-
-
     // Deletes one of the coach's evaluations with all of its ratings. 404 if
     // it doesn't exist, 403 if another coach wrote it. The tables have no
     // ON DELETE CASCADE, so children go first: sub-attribute ratings, then
@@ -304,12 +304,55 @@ public class CoachController {
         }
 
         subAttributeRatingRepository.deleteAll(
-            subAttributeRatingRepository.findByAttributeRatingEvaluationIdOrderBySubAttributeDisplayOrderAsc(evaluationId));
+                subAttributeRatingRepository
+                        .findByAttributeRatingEvaluationIdOrderBySubAttributeDisplayOrderAsc(evaluationId));
         attributeRatingRepository.deleteAll(
-            attributeRatingRepository.findByEvaluationIdOrderByAttributeDisplayOrderAsc(evaluationId));
+                attributeRatingRepository.findByEvaluationIdOrderByAttributeDisplayOrderAsc(evaluationId));
         evaluationRepository.delete(evaluation);
 
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/me/drill-assignments")
+    public ResponseEntity<CreateDrillAssignmentResponse> assignDrill(
+            @AuthenticationPrincipal Jwt jwt,
+            @Valid @RequestBody CreateDrillAssignmentRequest request) {
+        UUID coachId = UUID.fromString(jwt.getSubject());
+        Coaches coach = coachRepository.findById(coachId).orElse(null);
+        if (coach == null) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
+        Players player = playerRepository.findById(request.playerId()).orElse(null);
+        if (player == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
+        if (player.getCoach() == null || !player.getCoach().getId().equals(coachId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
+        Drill drill = drillRepository.findById(request.drillId()).orElse(null);
+        boolean otherCoachesDrill = drill != null
+                && drill.getCoach() != null
+                && !drill.getCoach().getId().equals(coachId);
+        if (drill == null || drill.isArchived() || otherCoachesDrill) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
+
+        if (drillAssignmentRepository.existsByDrillIdAndPlayerIdAndStatus(drill.getId(), player.getId(), "assigned")) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).build();
+        }
+
+        DrillAssignment assignment = new DrillAssignment();
+        assignment.setDrill(drill);
+        assignment.setPlayer(player);
+        assignment.setCoach(coach);
+        assignment.setDueDate(request.dueDate());
+        assignment.setCoachNote(request.coachNote());
+        DrillAssignment saved = drillAssignmentRepository.save(assignment);
+
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(new CreateDrillAssignmentResponse(saved.getId()));
     }
 
     // Keeps generating codes until one isn't already taken by another coach.

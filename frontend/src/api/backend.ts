@@ -1,5 +1,26 @@
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8080'
 
+export interface AssignedDrillResponse {
+  id: number
+  drillId: number
+  drillName: string
+  description: string | null
+  instructions: string | null
+  equipment: string | null
+  demoVideoUrl: string | null
+  difficulty: string
+  durationMinutes: number
+  requiresVideo: boolean
+  playerId: string
+  playerName: string
+  dueDate: string
+  status: string
+  coachNote: string
+  assignedAt: string
+  submittedAt: string
+  reviewedAt: string
+}
+
 export interface CreateEvaluationResponse {
   id: number
 }
@@ -313,3 +334,16 @@ export async function getDrills(accessToken: string): Promise<DrillResponse[]> {
   }
   return res.json()
 }
+
+export async function getAssignedDrills(accessToken: string): Promise<AssignedDrillResponse[]> {
+  const res = await fetch(`${API_URL}/players/me/drill-assignments`, {
+    method: 'GET',
+    headers: { Authorization: `Bearer ${accessToken}` },
+  })
+
+  if (!res.ok) {
+    throw new Error(`Failed to fetch assigned drills (${res.status})`)
+  }
+  return res.json()
+}
+

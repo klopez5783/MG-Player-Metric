@@ -2,6 +2,7 @@ import { Link } from 'react-router'
 import AppHeader from '../../components/AppHeader'
 import AppFooter from '../../components/AppFooter'
 import type { Drill, DrillStatus } from '../evaluations/types'
+import { useAssignedDrills } from './useGetAssignedDrill'
 
 const STATUS_LABEL: Record<DrillStatus, string> = {
   not_started: 'Not started',
@@ -17,7 +18,7 @@ const STATUS_STYLE: Record<DrillStatus, string> = {
 
 // TODO: fetch from the backend once a drill-assignment endpoint exists.
 export default function PlayerDrillsPage() {
-  const drills: Drill[] = []
+  const { drills } = useAssignedDrills()
   const sorted = [...drills].sort((a, b) => a.dueDate.localeCompare(b.dueDate))
 
   return (
@@ -37,16 +38,16 @@ export default function PlayerDrillsPage() {
                   className="flex items-center justify-between gap-3 px-4 py-4 transition hover:bg-surface-hover"
                 >
                   <div>
-                    <p className="text-sm font-medium text-ink">{drill.name}</p>
+                    <p className="text-sm font-medium text-ink">{drill.drillName}</p>
                     <p className="text-xs text-ink-mute">
-                      {drill.targetSkill} · due {new Date(drill.dueDate).toLocaleDateString()}
+                      Due {new Date(drill.dueDate).toLocaleDateString()}
                     </p>
                   </div>
-                  <span
+                  {/* <span
                     className={`flex-none rounded-full px-2.5 py-1 text-xs font-medium ${STATUS_STYLE[drill.status]}`}
                   >
                     {STATUS_LABEL[drill.status]}
-                  </span>
+                  </span> */}
                 </Link>
               </li>
             ))}

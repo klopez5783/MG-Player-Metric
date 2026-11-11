@@ -1,14 +1,13 @@
 import { Link, useParams } from 'react-router'
 import AppHeader from '../../components/AppHeader'
 import AppFooter from '../../components/AppFooter'
-import type { Drill } from '../evaluations/types'
+import { useAssignedDrills } from './useGetAssignedDrill'
 
-// TODO: fetch the real drill by id once a drill-assignment endpoint exists,
-// and wire the upload button to a real video-submission endpoint.
 export default function DrillDetailPage() {
   const { drillId } = useParams<{ drillId: string }>()
-  const drills: Drill[] = []
-  const drill = drills.find((d) => d.id === drillId)
+  const { drills, loading, error } = useAssignedDrills()
+  // The route param is a string; assignment ids are numbers.
+  const drill = drills.find((d) => d.id === Number(drillId))
 
   return (
     <div className="min-h-screen bg-canvas">
@@ -18,38 +17,52 @@ export default function DrillDetailPage() {
           ← Back to drills
         </Link>
 
-        {!drill ? (
-          <p className="mt-6 text-sm text-ink-soft">You don't have any drills yet.</p>
+        {loading ? (
+          <p className="mt-6 text-sm text-ink-mute">Loading drill…</p>
+        ) : error ? (
+          <p className="mt-6 text-sm text-red-400">{error}</p>
+        ) : !drill ? (
+          <p className="mt-6 text-sm text-ink-soft">This drill couldn't be found.</p>
         ) : (
           <>
-            <h1 className="mt-4 text-2xl font-semibold text-ink">{drill.name}</h1>
+            <h1 className="mt-4 text-2xl font-semibold text-ink">{drill.drillName}</h1>
             <p className="mt-1 text-sm text-ink-mute">
-              Targets {drill.targetSkill} · due {new Date(drill.dueDate).toLocaleDateString()}
+              {drill.dueDate ? `Due ${formatDate(drill.dueDate)}` : 'No due date'}
+              {drill.durationMinutes ? ` · ${drill.durationMinutes} min` : ''}
             </p>
 
-            <section className="mt-6 rounded-2xl border border-line bg-surface p-6">
-              <h2 className="text-sm font-semibold text-ink">Instructions</h2>
-              <p className="mt-2 text-sm text-ink-soft">{drill.instructions}</p>
-            </section>
+            {drill.coachNote && (
+              <section className="mt-6 rounded-2xl border border-line bg-surface p-6">
+                <h2 className="text-sm font-semibold text-ink">Note from your coach</h2>
+                <p className="mt-2 whitespace-pre-line text-sm text-ink-soft">{drill.coachNote}</p>
+              </section>
+            )}
 
             <section className="mt-4 rounded-2xl border border-line bg-surface p-6">
-              <h2 className="text-sm font-semibold text-ink">Submit your video</h2>
-              <p className="mt-2 text-sm text-ink-soft">
-                Video upload isn't connected yet — this is where you'll add your clip and an optional
-                note for your coach.
-              </p>
-              <button
-                type="button"
-                disabled
-                className="mt-4 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-ink opacity-60"
-              >
-                Upload video
-              </button>
+              <h2 className="text-sm font-semibold text-ink">Instructions</h2>
+              {drill.equipment && <p className="mt-2 text-xs text-ink-mute">Equipment: {drill.equipment}</p>}
+              <p className="mt-2 whitespace-pre-line text-sm text-ink-soft">{drill.instructions ?? '—'}</p>
+              {drill.demoVideoUrl && (
+                <a href={drill.demoVideoUrl} target="_blank" rel="noreferrer"
+                   className="mt-3 inline-block text-sm font-medium text-accent hover:underline">
+                  Watch demo video ↗
+                </a>
+              )}
             </section>
+
+            {/* keep your existing "Submit your video" section here */}
           </>
         )}
       </main>
       <AppFooter />
     </div>
   )
+}
+
+// "2026-11-20" -> "Nov 20, 2026". A date-only string is read as UTC by
+// new Date(), which shows the previous day in US timezones, so build it from
+// the parts in local time instead.
+function formatDate(value: string): string {
+  const [y, m, d] = value.split('-').map(Number)
+  return new Date(y, m - 1, d).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
 }

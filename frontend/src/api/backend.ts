@@ -376,8 +376,15 @@ export async function submitDrill(accessToken: string, assignmentId: number, req
   }
 }
 
-export async function getCompletedAssignedDrills(accessToken: string){
-  const res = await fetch(`${API_URL}/coaches/me/drill-assignments?status=submitted`, {
+// The coach's assignments in one review state: 'submitted' is the queue
+// waiting on them, 'reviewed' is their history of past feedback.
+export type CoachReviewStatus = 'submitted' | 'reviewed'
+
+export async function getCoachDrillAssignments(
+  accessToken: string,
+  status: CoachReviewStatus,
+): Promise<AssignedDrillResponse[]> {
+  const res = await fetch(`${API_URL}/coaches/me/drill-assignments?status=${status}`, {
     method: 'GET',
     headers: { Authorization: `Bearer ${accessToken}` },
   })

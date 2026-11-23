@@ -4,16 +4,24 @@ import AppHeader from '../../components/AppHeader'
 import AppFooter from '../../components/AppFooter'
 import { reviewDrill } from '../../api/backend'
 import { useAuth } from '../../hooks/useAuth'
-import { removeFromPendingReviews, useGetPendingReviews } from './hooks/useGetPendingReviews'
+import { moveToReviewed, useCoachReviews } from './hooks/useCoachReviews'
 import { useSignedVideoUrl } from './hooks/useSignedVideoUrl'
 
-// One submitted drill for the coach to review. Reads it from the pending
-// reviews cache, so coming from the review list needs no extra fetch.
+// One drill submission. Pending ones get the feedback form; reviewed ones
+// show the feedback read-only. Reads from the review caches, so coming from
+// either tab needs no extra fetch.
 export default function VideoReviewPage() {
   const { reviewId } = useParams<{ reviewId: string }>()
-  const { reviews, loading, error } = useGetPendingReviews()
+  const pending = useCoachReviews('submitted')
+  const reviewed = useCoachReviews('reviewed')
   // The route param is a string; assignment ids are numbers.
-  const review = reviews.find((r) => r.id === Number(reviewId))
+  const id = Number(reviewId)
+  const review = pending.reviews.find((r) => r.id === id) ?? reviewed.reviews.find((r) => r.id === id)
+  // Only "not found" once both lists have loaded.
+  const loading = !review && (pending.loading || reviewed.loading)
+  const error = !review ? (pending.error ?? reviewed.error) : null
+  const isReviewed = review?.status === 'reviewed'
+  const backTo = isReviewed ? '/coach/reviews?tab=reviewed' : '/coach/reviews'
   // Waits for the review to load; null path = nothing to fetch yet.
   const video = useSignedVideoUrl(review?.videoPath)
 
@@ -28,8 +36,9 @@ export default function VideoReviewPage() {
     setSaving(true)
     setSaveError(null)
     try {
-      await reviewDrill(session.access_token, review.id, { comment: comment.trim() || null })
-      removeFromPendingReviews(review.id)
+      const trimmed = comment.trim() || null
+      await reviewDrill(session.access_token, review.id, { comment: trimmed })
+      moveToReviewed(review, trimmed)
       navigate('/coach/reviews', { replace: true })
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : 'Could not save the review.')
@@ -41,7 +50,7 @@ export default function VideoReviewPage() {
     <div className="min-h-screen bg-canvas">
       <AppHeader />
       <main className="mx-auto max-w-2xl px-4 py-10">
-        <Link to="/coach/reviews" className="text-sm font-medium text-ink-soft underline hover:text-ink">
+        <Link to={backTo} className="text-sm font-medium text-ink-soft underline hover:text-ink">
           ← Back to reviews
         </Link>
 
@@ -50,15 +59,14 @@ export default function VideoReviewPage() {
         ) : error ? (
           <p className="mt-6 text-sm text-red-400">{error}</p>
         ) : !review ? (
-          <p className="mt-6 text-sm text-ink-soft">
-            This submission couldn't be found. It may already have been reviewed.
-          </p>
+          <p className="mt-6 text-sm text-ink-soft">This submission couldn't be found.</p>
         ) : (
           <>
             <h1 className="mt-4 text-2xl font-semibold text-ink">{review.drillName}</h1>
             <p className="mt-1 text-sm text-ink-mute">
               {review.playerName} · submitted {new Date(review.submittedAt).toLocaleDateString()}
               {review.dueDate ? ` · due ${formatDate(review.dueDate)}` : ''}
+              {isReviewed ? ` · reviewed ${new Date(review.reviewedAt).toLocaleDateString()}` : ''}
             </p>
 
             <section className="mt-6 rounded-2xl border border-line bg-surface p-6">
@@ -93,6 +101,14 @@ export default function VideoReviewPage() {
             </section>
 
             {/* The player sees this comment on the drill once it's reviewed. */}
+            {isReviewed ? (
+              <section className="mt-4 rounded-2xl border border-line bg-surface p-6">
+                <h2 className="text-sm font-semibold text-ink">Your feedback</h2>
+                <p className="mt-2 whitespace-pre-line text-sm text-ink-soft">
+                  {review.coachReviewComment ?? 'No comment left.'}
+                </p>
+              </section>
+            ) : (
             <section className="mt-4 rounded-2xl border border-line bg-surface p-6">
               <h2 className="text-sm font-semibold text-ink">Your feedback</h2>
               <textarea
@@ -116,6 +132,7 @@ export default function VideoReviewPage() {
               </div>
               {saveError && <p className="mt-2 text-xs text-red-400">{saveError}</p>}
             </section>
+            )}
           </>
         )}
       </main>

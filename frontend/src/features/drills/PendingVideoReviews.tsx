@@ -1,8 +1,10 @@
 import { Link } from 'react-router'
-import { useGetPendingReviews } from './hooks/useGetPendingReviews'
+import { useCoachReviews } from './hooks/useCoachReviews'
 
+// The coach's submitted drills waiting for review, oldest first so nothing
+// sits unreviewed. Used on the dashboard and the queue's Pending tab.
 export default function PendingVideoReviews() {
-  const { reviews, loading, error } = useGetPendingReviews()
+  const { reviews, loading, error } = useCoachReviews('submitted')
   const sorted = [...reviews].sort((a, b) => a.submittedAt.localeCompare(b.submittedAt))
 
   return (

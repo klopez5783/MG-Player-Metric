@@ -8,26 +8,22 @@ import { supabase } from '../../../api/supabseClient'
 // file at the same path, so a fresh link is signed and the browser doesn't
 // replay its cached copy of the old video.
 export function useSignedVideoUrl(path: string | null | undefined, version = 0) {
-  const [url, setUrl] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  // Each result remembers which path/version it was signed for, so a stale
+  // one from a previous video is ignored instead of being reset in the effect.
+  const key = path ? `${path}#${version}` : null
+  const [result, setResult] = useState<{ key: string; url: string | null; error: string | null } | null>(null)
 
   useEffect(() => {
     if (!path) return
+    const requestKey = `${path}#${version}`
     let cancelled = false
-    setLoading(true)
-    setError(null)
 
     supabase.storage
       .from('Drill_Videos')
       .createSignedUrl(path, 3600)
       .then(({ data, error }) => {
         if (cancelled) return
-        if (error) setError(error.message)
-        else setUrl(data.signedUrl)
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false)
+        setResult({ key: requestKey, url: data?.signedUrl ?? null, error: error?.message ?? null })
       })
 
     return () => {
@@ -35,5 +31,6 @@ export function useSignedVideoUrl(path: string | null | undefined, version = 0) 
     }
   }, [path, version])
 
-  return { url, loading, error }
+  const current = result && result.key === key ? result : null
+  return { url: current?.url ?? null, loading: key !== null && !current, error: current?.error ?? null }
 }

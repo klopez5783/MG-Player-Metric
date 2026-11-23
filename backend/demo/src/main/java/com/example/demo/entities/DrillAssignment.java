@@ -47,6 +47,18 @@ public class DrillAssignment {
     @Column(name = "reviewed_at")
     private LocalDateTime reviewedAt;
 
+    // Where the player's video sits in the Drill_Videos bucket
+    // ("<player id>/<assignment id>.mp4"). NULL until they submit.
+    @Column(name = "video_path")
+    private String videoPath;
+
+    @Column(name = "player_note")
+    private String playerNote;
+
+    // The coach's comment after watching the video (V12). NULL until reviewed.
+    @Column(name = "coach_review_comment")
+    private String coachReviewComment;
+
     // Getters and Setters
 
     public Integer getId() {
@@ -123,6 +135,30 @@ public class DrillAssignment {
 
     public void setReviewedAt(LocalDateTime reviewedAt) {
         this.reviewedAt = reviewedAt;
+    }
+
+    public String getVideoPath() {
+        return videoPath;
+    }
+
+    public void setVideoPath(String videoPath) {
+        this.videoPath = videoPath;
+    }
+
+    public String getPlayerNote() {
+        return playerNote;
+    }
+
+    public void setPlayerNote(String playerNote) {
+        this.playerNote = playerNote;
+    }
+
+    public String getCoachReviewComment() {
+        return coachReviewComment;
+    }
+
+    public void setCoachReviewComment(String coachReviewComment) {
+        this.coachReviewComment = coachReviewComment;
     }
 
 }

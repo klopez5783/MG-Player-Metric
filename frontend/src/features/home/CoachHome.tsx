@@ -4,20 +4,18 @@ import RosterSnapshot from '../players/RosterSnapshot'
 import { useCoachRoster } from '../players/useCoachRoster'
 import EvaluationsDue from '../evaluations/EvaluationsDue'
 import PendingVideoReviews from '../drills/PendingVideoReviews'
-import type { PendingVideoReview } from '../evaluations/types'
 import type { RosterPlayer } from '../players/types'
 import ActivityFeed from './ActivityFeed'
 import type { ActivityItem } from './types'
 import QuickActions from './QuickActions'
 import InviteCard from './InviteCard'
 
-// TODO: replace these with real fetches once the evaluation due-dates,
-// video-review and activity endpoints exist.
+// TODO: replace these with real fetches once the evaluation due-dates and
+// activity endpoints exist.
 export default function CoachHome() {
   const { roster } = useCoachRoster()
 
   const dueRoster: RosterPlayer[] = [] // no evaluations table yet — see EvaluationsDue
-  const reviews: PendingVideoReview[] = []
   const activity: ActivityItem[] = []
 
   return (
@@ -33,7 +31,7 @@ export default function CoachHome() {
 
         <div className="grid gap-4 lg:grid-cols-2">
           <EvaluationsDue roster={dueRoster} />
-          <PendingVideoReviews reviews={reviews} />
+          <PendingVideoReviews />
         </div>
 
         <ActivityFeed items={activity} />

@@ -1,12 +1,8 @@
 import AppHeader from '../../components/AppHeader'
 import AppFooter from '../../components/AppFooter'
 import PendingVideoReviews from './PendingVideoReviews'
-import type { PendingVideoReview } from '../evaluations/types'
 
-// TODO: fetch from the backend once a video-review endpoint exists.
 export default function ReviewQueuePage() {
-  const reviews: PendingVideoReview[] = []
-
   return (
     <div className="min-h-screen bg-canvas">
       <AppHeader />
@@ -15,7 +11,7 @@ export default function ReviewQueuePage() {
         <p className="mt-1 text-sm text-ink-soft">Oldest submissions first, so nothing sits unreviewed.</p>
 
         <div className="mt-6">
-          <PendingVideoReviews reviews={reviews} />
+          <PendingVideoReviews />
         </div>
       </main>
       <AppFooter />

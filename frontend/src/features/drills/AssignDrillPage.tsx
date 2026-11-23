@@ -5,7 +5,7 @@ import AppFooter from '../../components/AppFooter'
 import { assignDrill } from '../../api/backend'
 import { useAuth } from '../../hooks/useAuth'
 import { useCoachRoster } from '../players/useCoachRoster'
-import { useDrillLibrary } from './useDrillLibrary'
+import { useDrillLibrary } from './hooks/useDrillLibrary'
 
 // Today's date as "YYYY-MM-DD" in the coach's own timezone (toISOString()
 // would give the UTC date).

@@ -1,5 +1,12 @@
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8080'
 
+// Sent after the video is in Storage: where it landed ("<user id>/<assignment
+// id>.mp4") and an optional note for the coach. The file itself isn't sent.
+export interface SubmitDrillRequest {
+  videoPath: string
+  playerNote: string | null
+}
+
 export interface AssignedDrillResponse {
   id: number
   drillId: number
@@ -19,6 +26,14 @@ export interface AssignedDrillResponse {
   assignedAt: string
   submittedAt: string
   reviewedAt: string
+  videoPath: string | null
+  playerNote: string | null
+  coachReviewComment: string | null
+}
+
+// Sent when the coach marks a submission reviewed.
+export interface ReviewDrillRequest {
+  comment: string | null
 }
 
 export interface CreateEvaluationResponse {
@@ -347,3 +362,41 @@ export async function getAssignedDrills(accessToken: string): Promise<AssignedDr
   return res.json()
 }
 
+export async function submitDrill(accessToken: string, assignmentId: number, request: SubmitDrillRequest): Promise<void> {
+  const res = await fetch(`${API_URL}/players/me/drill-assignments/${assignmentId}/submit`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(request),
+  })
+  if (!res.ok) {
+    throw new Error(`Failed to submit drill (${res.status})`)
+  }
+}
+
+export async function getCompletedAssignedDrills(accessToken: string){
+  const res = await fetch(`${API_URL}/coaches/me/drill-assignments?status=submitted`, {
+    method: 'GET',
+    headers: { Authorization: `Bearer ${accessToken}` },
+  })
+  if (!res.ok) {
+    throw new Error(`Failed to fetch assigned drills (${res.status})`)
+  }
+  return res.json()
+}
+
+export async function reviewDrill(accessToken: string, assignmentId: number, request: ReviewDrillRequest): Promise<void> {
+  const res = await fetch(`${API_URL}/coaches/me/drill-assignments/${assignmentId}/review`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(request),
+  })
+  if (!res.ok) {
+    throw new Error(`Failed to save review (${res.status})`)
+  }
+}

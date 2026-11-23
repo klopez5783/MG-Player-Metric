@@ -1,6 +1,7 @@
 package com.example.demo.controllers;
 
 import java.security.SecureRandom;
+import java.time.LocalDateTime;
 import java.util.UUID;
 import java.util.Comparator;
 import java.util.List;
@@ -14,6 +15,7 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -24,12 +26,15 @@ import org.springframework.web.server.ResponseStatusException;
 import com.example.demo.dto.CreateEvaluationRequest;
 import com.example.demo.dto.CreateEvaluationResponse;
 import com.example.demo.dto.InviteCodeResponse;
+import com.example.demo.dto.ReviewDrillRequest;
 import com.example.demo.dto.AttributeRatingRequest;
 import com.example.demo.dto.CreateDrillAssignmentRequest;
 import com.example.demo.dto.CreateDrillAssignmentResponse;
 import com.example.demo.dto.SubAttributeRatingRequest;
 import com.example.demo.dto.EvaluationDetailResponse;
 import com.example.demo.dto.EvaluationSummaryResponse;
+import com.example.demo.dto.GetAssignedDrillsRequest;
+import com.example.demo.dto.GetAssignedDrillsResponse;
 import com.example.demo.entities.Coaches;
 import com.example.demo.entities.Players;
 import com.example.demo.entities.Evaluation;
@@ -354,6 +359,82 @@ public class CoachController {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(new CreateDrillAssignmentResponse(saved.getId()));
     }
+
+        // The coach's drill assignments across their roster, newest first.
+    // Optional filters: ?status=submitted shows what's waiting for review,
+    // ?playerId=... narrows to one player.
+    @GetMapping("/me/drill-assignments")
+    @Transactional(readOnly = true)
+    public ResponseEntity<List<GetAssignedDrillsResponse>> myDrillAssignments(
+            @AuthenticationPrincipal Jwt jwt,
+            @Valid @ModelAttribute GetAssignedDrillsRequest filters) {
+        UUID coachId = UUID.fromString(jwt.getSubject());
+        if (!coachRepository.existsById(coachId))
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build(); // not a coach
+
+        List<GetAssignedDrillsResponse> assignments = drillAssignmentRepository
+                .findByCoachIdOrderByAssignedAtDesc(coachId).stream()
+                .filter(a -> filters.status() == null || filters.status().equals(a.getStatus()))
+                .filter(a -> filters.playerId() == null || filters.playerId().equals(a.getPlayer().getId()))
+                .map(a -> {
+                    Drill drill = a.getDrill();
+                    Players player = a.getPlayer();
+                    return new GetAssignedDrillsResponse(
+                            a.getId(),
+                            drill.getId(),
+                            drill.getName(),
+                            drill.getDescription(),
+                            drill.getInstructions(),
+                            drill.getEquipment(),
+                            drill.getDemoVideoUrl(),
+                            drill.getDifficulty(),
+                            drill.getDurationMinutes(),
+                            drill.isRequiresVideo(),
+                            player.getId(),
+                            player.getUser().getName(),
+                            a.getDueDate(),
+                            a.getStatus(),
+                            a.getCoachNote(),
+                            a.getAssignedAt(),
+                            a.getSubmittedAt(),
+                            a.getReviewedAt(),
+                            a.getVideoPath(),
+                            a.getPlayerNote(),
+                            a.getCoachReviewComment());
+                })
+                .toList();
+
+        return ResponseEntity.ok(assignments);
+    }
+
+
+    // The coach finishes reviewing a submission: saves their comment (optional)
+    // and moves the assignment from 'submitted' to 'reviewed'.
+    @PostMapping("/me/drill-assignments/{assignmentId}/review")
+    @Transactional
+    public ResponseEntity<Void> reviewDrill(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable Integer assignmentId,
+            @Valid @RequestBody ReviewDrillRequest request) {
+        UUID coachId = UUID.fromString(jwt.getSubject());
+        if (!coachRepository.existsById(coachId))
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build(); // not a coach
+
+        DrillAssignment assignment = drillAssignmentRepository.findById(assignmentId).orElse(null);
+        if (assignment == null)
+            return ResponseEntity.notFound().build(); // no such assignment
+        if (!assignment.getCoach().getId().equals(coachId))
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build(); // another coach's
+        if (!"submitted".equals(assignment.getStatus()))
+            return ResponseEntity.status(HttpStatus.CONFLICT).build(); // not submitted yet, or already reviewed
+
+        assignment.setCoachReviewComment(request.comment());
+        assignment.setStatus("reviewed");
+        assignment.setReviewedAt(LocalDateTime.now());
+        return ResponseEntity.noContent().build();
+    }
+
+
 
     // Keeps generating codes until one isn't already taken by another coach.
     private String generateUniqueCode() {

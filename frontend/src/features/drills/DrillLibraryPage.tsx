@@ -1,7 +1,7 @@
 import { Link } from 'react-router'
 import AppHeader from '../../components/AppHeader'
 import AppFooter from '../../components/AppFooter'
-import { useDrillLibrary } from './useDrillLibrary'
+import { useDrillLibrary } from './hooks/useDrillLibrary'
 
 
 // TODO: fetch from a real drill-library endpoint, and wire "Assign" through

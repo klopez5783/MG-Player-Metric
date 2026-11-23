@@ -8,6 +8,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,6 +18,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import com.example.demo.services.EvaluationDetailService;
 
+import jakarta.validation.Valid;
+
 import com.example.demo.repositories.PlayerRepository;
 import com.example.demo.repositories.CoachRepository;
 import com.example.demo.repositories.EvaluationRepository;
@@ -25,9 +28,11 @@ import com.example.demo.repositories.DrillAssignmentRepository;
 import com.example.demo.dto.EvaluationDetailResponse;
 import com.example.demo.dto.GetAssignedDrillsResponse;
 import com.example.demo.dto.JoinCoachRequest;
+import com.example.demo.dto.SubmitDrillRequest;
 
 import com.example.demo.entities.Coaches;
 import com.example.demo.entities.Drill;
+import com.example.demo.entities.DrillAssignment;
 import com.example.demo.entities.Players;
 import com.example.demo.entities.Evaluation;
 
@@ -138,11 +143,45 @@ public class PlayerController {
                             assignment.getCoachNote(),
                             assignment.getAssignedAt(),
                             assignment.getSubmittedAt(),
-                            assignment.getReviewedAt());
+                            assignment.getReviewedAt(),
+                            assignment.getVideoPath(),
+                            assignment.getPlayerNote(),
+                            assignment.getCoachReviewComment()
+                    );
                 })
                 .toList();
 
         return ResponseEntity.ok(drills);
     }
+
+    @PostMapping ("/me/drill-assignments/{assignmentId}/submit")
+    @Transactional
+    public ResponseEntity<Void> submitDrill(
+        @AuthenticationPrincipal Jwt jwt,
+         @PathVariable Integer assignmentId,
+        @Valid @RequestBody SubmitDrillRequest request) {
+        UUID id = UUID.fromString(jwt.getSubject());
+        if (!playerRepository.existsById(id))
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build(); // not a player
+
+        DrillAssignment assignment = drillAssignmentRepository.findById(assignmentId).orElse(null);
+        if (assignment == null)
+            return ResponseEntity.notFound().build(); // no such assignment
+        if (!assignment.getPlayer().getId().equals(id))
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build(); // someone else's
+        if ("reviewed".equals(assignment.getStatus()))
+            return ResponseEntity.status(HttpStatus.CONFLICT).build(); // already reviewed
+
+        // The video must be in this player's own folder: "<player id>/..."
+        if (!request.videoPath().startsWith(id + "/"))
+            return ResponseEntity.badRequest().build();
+
+        assignment.setVideoPath(request.videoPath());
+        assignment.setPlayerNote(request.playerNote());
+        assignment.setStatus("submitted");
+        assignment.setSubmittedAt(LocalDateTime.now());
+        return ResponseEntity.noContent().build();
+    }
+
 
 }

@@ -1,8 +1,9 @@
 import { Link } from 'react-router'
-import type { PendingVideoReview } from '../evaluations/types'
+import { useGetPendingReviews } from './hooks/useGetPendingReviews'
 
-export default function PendingVideoReviews({ reviews }: { reviews: PendingVideoReview[] }) {
-  const sorted = [...reviews].sort((a, b) => a.submittedDate.localeCompare(b.submittedDate))
+export default function PendingVideoReviews() {
+  const { reviews, loading, error } = useGetPendingReviews()
+  const sorted = [...reviews].sort((a, b) => a.submittedAt.localeCompare(b.submittedAt))
 
   return (
     <div className="rounded-2xl border border-line bg-surface p-6">
@@ -10,7 +11,11 @@ export default function PendingVideoReviews({ reviews }: { reviews: PendingVideo
         Pending video reviews{sorted.length > 0 ? ` (${sorted.length})` : ''}
       </h2>
 
-      {sorted.length === 0 ? (
+      {loading ? (
+        <p className="mt-3 text-sm text-ink-mute">Loading reviews…</p>
+      ) : error ? (
+        <p className="mt-3 text-sm text-red-400">{error}</p>
+      ) : !sorted || sorted.length === 0 ? (
         <p className="mt-3 text-sm text-ink-soft">Nothing waiting on you.</p>
       ) : (
         <ul className="mt-3 divide-y divide-line">
@@ -19,7 +24,7 @@ export default function PendingVideoReviews({ reviews }: { reviews: PendingVideo
               <div>
                 <p className="text-sm font-medium text-ink">{review.playerName}</p>
                 <p className="text-xs text-ink-mute">
-                  {review.drillName} · submitted {new Date(review.submittedDate).toLocaleDateString()}
+                  {review.drillName} · submitted {new Date(review.submittedAt).toLocaleDateString()}
                 </p>
               </div>
               <Link

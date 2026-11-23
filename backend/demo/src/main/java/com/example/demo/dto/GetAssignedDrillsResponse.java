@@ -25,5 +25,8 @@ public record GetAssignedDrillsResponse(
         String coachNote,
         LocalDateTime assignedAt,
         LocalDateTime submittedAt,
-        LocalDateTime reviewedAt) {
+        LocalDateTime reviewedAt,
+        String videoPath,
+        String playerNote,
+        String coachReviewComment) {
 }

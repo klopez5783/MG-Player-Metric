@@ -2,7 +2,7 @@ import { Link } from 'react-router'
 import AppHeader from '../../components/AppHeader'
 import AppFooter from '../../components/AppFooter'
 import type { AssignedDrillResponse } from '../../api/backend'
-import { useAssignedDrills } from './useGetAssignedDrill'
+import { useAssignedDrills } from './hooks/useGetAssignedDrill'
 
 type AssignmentStatus = AssignedDrillResponse['status']
 

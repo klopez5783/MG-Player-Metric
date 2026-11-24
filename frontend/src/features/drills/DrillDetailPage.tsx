@@ -9,6 +9,7 @@ import {
 import { useSignedVideoUrl } from "./hooks/useSignedVideoUrl";
 import { submitDrill } from "../../api/backend";
 import { useAuth } from "../../hooks/useAuth";
+import { usePlayers } from "../../hooks/usePlayers";
 import { supabase } from "../../api/supabseClient";
 
 export default function DrillDetailPage() {
@@ -18,6 +19,7 @@ export default function DrillDetailPage() {
   const drill = drills.find((d) => d.id === Number(drillId));
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const { session } = useAuth();
+  const { selectedPlayer } = usePlayers();
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
@@ -30,12 +32,14 @@ export default function DrillDetailPage() {
   const isSubmitted = submitted || drill?.status === "submitted";
 
   async function handleUpload() {
-    if (!session || !drill || !videoFile) return;
+    if (!session || !selectedPlayer || !drill || !videoFile) return;
     setUploading(true);
     setUploadError(null);
 
-    // <player's user id>/<assignment id>.mp4 is the folder the Storage policy allows
-    const path = `${session.user.id}/${drill.id}.mp4`;
+    // <player id>/<assignment id>.mp4. The player id, not the login's id: a
+    // parent uploads into each child's own folder, which the Storage policy
+    // allows for players this login manages.
+    const path = `${selectedPlayer.id}/${drill.id}.mp4`;
 
     try {
       // 1. Send the file straight to Storage. upsert lets a re-upload replace it.
@@ -45,7 +49,7 @@ export default function DrillDetailPage() {
       if (error) throw error;
 
       // 2. Tell the backend where it went
-      await submitDrill(session.access_token, drill.id, {
+      await submitDrill(session.access_token, selectedPlayer.id, drill.id, {
         videoPath: path,
         playerNote: null,
       });

@@ -1,6 +1,6 @@
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8080'
 
-// Sent after the video is in Storage: where it landed ("<user id>/<assignment
+// Sent after the video is in Storage: where it landed ("<player id>/<assignment
 // id>.mp4") and an optional note for the coach. The file itself isn't sent.
 export interface SubmitDrillRequest {
   videoPath: string
@@ -81,9 +81,33 @@ export interface MeResponse {
   email: string
   name: string | null
   role: Role
+}
+
+// One player on the logged-in account (GET /players/me). A parent's account
+// has one per child. Age is worked out from the date of birth on the backend;
+// the coach fields are null until this player joins a coach.
+export interface PlayerSummary {
+  id: string
+  name: string | null
+  dateOfBirth: string | null
+  age: number | null
+  position: string | null
+  team: string | null
   coachId: string | null
   coachName: string | null
 }
+
+// Adds a player to the logged-in account. dateOfBirth is "YYYY-MM-DD".
+export interface CreatePlayerRequest {
+  name: string
+  dateOfBirth: string | null
+  position: string | null
+  team: string | null
+}
+
+// Replaces every field: send the current values for anything not being
+// changed, and null to clear one.
+export type UpdatePlayerRequest = CreatePlayerRequest
 
 export interface InviteCodeResponse {
   inviteCode: string
@@ -178,8 +202,58 @@ export async function getInviteCode(accessToken: string): Promise<InviteCodeResp
   return res.json()
 }
 
-export async function joinCoachByCode(accessToken: string, code: string): Promise<void> {
-  const res = await fetch(`${API_URL}/players/me/coach`, {
+// The players this login manages. Not to be confused with getMyPlayers below,
+// which is a coach's roster.
+export async function getAccountPlayers(accessToken: string): Promise<PlayerSummary[]> {
+  const res = await fetch(`${API_URL}/players/me`, {
+    method: 'GET',
+    headers: { Authorization: `Bearer ${accessToken}` },
+  })
+
+  if (!res.ok) {
+    throw new Error(`Failed to fetch your players (${res.status})`)
+  }
+  return res.json()
+}
+
+export async function addPlayer(accessToken: string, request: CreatePlayerRequest): Promise<PlayerSummary> {
+  const res = await fetch(`${API_URL}/players/me`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(request),
+  })
+
+  if (!res.ok) {
+    throw new Error(`Failed to add player (${res.status})`)
+  }
+  return res.json()
+}
+
+export async function updatePlayer(
+  accessToken: string,
+  playerId: string,
+  request: UpdatePlayerRequest,
+): Promise<PlayerSummary> {
+  const res = await fetch(`${API_URL}/players/me/${playerId}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(request),
+  })
+
+  if (!res.ok) {
+    throw new Error(`Failed to update player (${res.status})`)
+  }
+  return res.json()
+}
+
+export async function joinCoachByCode(accessToken: string, playerId: string, code: string): Promise<void> {
+  const res = await fetch(`${API_URL}/players/me/${playerId}/coach`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -193,8 +267,8 @@ export async function joinCoachByCode(accessToken: string, code: string): Promis
   }
 }
 
-export async function leaveCoach(accessToken: string): Promise<void> {
-  const res = await fetch(`${API_URL}/players/me/coach`, {
+export async function leaveCoach(accessToken: string, playerId: string): Promise<void> {
+  const res = await fetch(`${API_URL}/players/me/${playerId}/coach`, {
     method: 'DELETE',
     headers: { Authorization: `Bearer ${accessToken}` },
   })
@@ -270,10 +344,13 @@ export async function getEvaluation(accessToken: string, evaluationId: string): 
   return res.json()
 }
 
-// The logged-in player's most recent evaluation, or null if they don't have
-// one yet (the backend answers 204 No Content).
-export async function getMyLatestEvaluation(accessToken: string): Promise<EvaluationDetailResponse | null> {
-  const res = await fetch(`${API_URL}/players/me/evaluations/latest`, {
+// The player's most recent evaluation, or null if they don't have one yet
+// (the backend answers 204 No Content).
+export async function getMyLatestEvaluation(
+  accessToken: string,
+  playerId: string,
+): Promise<EvaluationDetailResponse | null> {
+  const res = await fetch(`${API_URL}/players/me/${playerId}/evaluations/latest`, {
     method: 'GET',
     headers: { Authorization: `Bearer ${accessToken}` },
   })
@@ -350,8 +427,8 @@ export async function getDrills(accessToken: string): Promise<DrillResponse[]> {
   return res.json()
 }
 
-export async function getAssignedDrills(accessToken: string): Promise<AssignedDrillResponse[]> {
-  const res = await fetch(`${API_URL}/players/me/drill-assignments`, {
+export async function getAssignedDrills(accessToken: string, playerId: string): Promise<AssignedDrillResponse[]> {
+  const res = await fetch(`${API_URL}/players/me/${playerId}/drill-assignments`, {
     method: 'GET',
     headers: { Authorization: `Bearer ${accessToken}` },
   })
@@ -362,8 +439,13 @@ export async function getAssignedDrills(accessToken: string): Promise<AssignedDr
   return res.json()
 }
 
-export async function submitDrill(accessToken: string, assignmentId: number, request: SubmitDrillRequest): Promise<void> {
-  const res = await fetch(`${API_URL}/players/me/drill-assignments/${assignmentId}/submit`, {
+export async function submitDrill(
+  accessToken: string,
+  playerId: string,
+  assignmentId: number,
+  request: SubmitDrillRequest,
+): Promise<void> {
+  const res = await fetch(`${API_URL}/players/me/${playerId}/drill-assignments/${assignmentId}/submit`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

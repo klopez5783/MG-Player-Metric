@@ -4,19 +4,28 @@ import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.Period;
 import java.util.UUID;
 
 @Entity
 @Table(name = "players")
 public class Players {
 
+    // Generated on save. No longer the user's id, since one login can manage
+    // several players.
     @Id
+    @GeneratedValue
     private UUID id;
 
-    @OneToOne
-    @MapsId
-    @JoinColumn(name = "id")
+    // The account that manages this player: the player themselves, or a parent.
+    @ManyToOne(optional = false)
+    @JoinColumn(name = "user_id", nullable = false)
     private User user;
+
+    // The player's own name. users.name is the account holder's, which is a
+    // parent's when a parent manages the player.
+    @Column(name = "name")
+    private String name;
 
     @ManyToOne
     @JoinColumn(name = "coach_id", nullable = true)
@@ -56,12 +65,26 @@ public class Players {
         this.user = user;
     }
 
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
     public Coaches getCoach() {
         return coach;
     }
 
     public void setCoach(Coaches coach) {
         this.coach = coach;
+    }
+
+    // Age today, from the date of birth. Not a column; null if no birthday.
+    public Integer getAge() {
+        if (dateOfBirth == null) return null;
+        return Period.between(dateOfBirth, LocalDate.now()).getYears();
     }
 
     public LocalDate getDateOfBirth() {

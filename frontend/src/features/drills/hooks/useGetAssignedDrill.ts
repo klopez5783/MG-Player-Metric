@@ -1,49 +1,59 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../../../hooks/useAuth";
+import { usePlayers } from "../../../hooks/usePlayers";
 import {
   getAssignedDrills,
   type AssignedDrillResponse,
 } from "../../../api/backend";
 
-let cache: { userId: string; drills: AssignedDrillResponse[] } | null = null;
+// Tagged with the player id, so switching players never shows the last
+// player's drills.
+let cache: { playerId: string; drills: AssignedDrillResponse[] } | null = null;
 
+// The selected player's assigned drills. Shows the cached copy straight away
+// and quietly refetches in the background.
 export function useAssignedDrills() {
   const { session } = useAuth();
-  const userId = session?.user.id;
-  const cached = cache && cache.userId === userId ? cache : null;
+  const { selectedPlayer, playersLoading } = usePlayers();
+  const playerId = selectedPlayer?.id;
 
-  const [drills, setDrills] = useState<AssignedDrillResponse[]>(
-    cached?.drills ?? [],
-  );
-  const [loading, setLoading] = useState(!cached);
-  const [error, setError] = useState<string | null>(null);
+  // Each result remembers which player it was fetched for, so a stale one
+  // from the previous player is ignored instead of being reset in the effect.
+  const [result, setResult] = useState<{
+    playerId: string;
+    drills: AssignedDrillResponse[] | null;
+    error: string | null;
+  } | null>(null);
 
   useEffect(() => {
-    if (!session) return;
+    if (!session || !playerId) return;
     let cancelled = false;
 
-    getAssignedDrills(session.access_token)
+    getAssignedDrills(session.access_token, playerId)
       .then((data) => {
-        cache = { userId: session.user.id, drills: data };
-        if (!cancelled) setDrills(data);
+        cache = { playerId, drills: data };
+        if (!cancelled) setResult({ playerId, drills: data, error: null });
       })
       .catch((err) => {
-        // A failed background refresh keeps showing the cached library.
-        const hasCached = cache?.userId === session.user.id;
-        if (!cancelled && !hasCached) {
-          setError(
-            err instanceof Error ? err.message : "Could not load drills.",
-          );
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
+        if (!cancelled)
+          setResult({
+            playerId,
+            drills: null,
+            error: err instanceof Error ? err.message : "Could not load drills.",
+          });
       });
 
     return () => {
       cancelled = true;
     };
-  }, [session]);
+  }, [session, playerId]);
+
+  const current = result && result.playerId === playerId ? result : null;
+  const cached = cache && cache.playerId === playerId ? cache.drills : null;
+  const drills = current?.drills ?? cached ?? [];
+  const loading = playersLoading || (!!playerId && !current && !cached);
+  // A failed background refresh keeps showing the cached drills.
+  const error = current?.error && !cached ? current.error : null;
 
   return { drills, loading, error };
 }

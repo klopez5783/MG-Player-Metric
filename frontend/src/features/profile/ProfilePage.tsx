@@ -5,6 +5,7 @@ import AppFooter from '../../components/AppFooter'
 import FormField from '../../components/FormField'
 import { updateProfile } from '../../api/backend'
 import { useAuth } from '../../hooks/useAuth'
+import AccountPlayers from './AccountPlayers'
 
 // Wait for the profile before mounting the form, so the name box starts with the saved value.
 export default function ProfilePage() {
@@ -94,6 +95,8 @@ function ProfileForm() {
             </Link>
           </div>
         </form>
+
+        {me?.role === 'player' && <AccountPlayers />}
       </main>
       <AppFooter />
     </div>

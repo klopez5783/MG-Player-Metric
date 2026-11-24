@@ -69,12 +69,18 @@ public class UserSyncController {
                 coachRepository.save(coach);
             }
         } else {
-            if (playerRepository.findById(userId).isEmpty()) {
+            // A new player account starts with one player: themselves. A
+            // parent adds more through POST /players/me.
+            if (!playerRepository.existsByUserId(userId)) {
                 LocalDateTime now = LocalDateTime.now();
                 Players player = new Players();
                 player.setUser(user);
                 player.setCreatedAt(now);
                 player.setUpdatedAt(now);
+                player.setName(user.getName());
+                player.setDateOfBirth(null);
+                player.setPosition(null);
+                player.setTeam(null);   
                 playerRepository.save(player);
             }
         }

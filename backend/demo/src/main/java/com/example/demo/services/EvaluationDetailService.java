@@ -72,7 +72,7 @@ public class EvaluationDetailService {
         return new EvaluationDetailResponse(
             evaluation.getId(),
             player.getId(),
-            player.getUser().getName(),
+            player.getName(),
             evaluation.getEvaluationDate(),
             evaluation.getEvaluationType(),
             evaluation.getOverallRating(),

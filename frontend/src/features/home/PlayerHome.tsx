@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import AppHeader from '../../components/AppHeader'
 import AppFooter from '../../components/AppFooter'
 import { useAuth } from '../../hooks/useAuth'
+import { usePlayers } from '../../hooks/usePlayers'
 import { joinCoachByCode } from '../../api/backend'
 import PlayerSnapshot from '../players/PlayerSnapshot'
 import AttributeGrid from '../evaluations/AttributeGrid'
@@ -11,15 +12,26 @@ import ActiveDrills from '../drills/ActiveDrills'
 import { useMyLatestEvaluation } from '../evaluations/useMyLatestEvaluation'
 import type { CoachFeedback, Drill } from '../evaluations/types'
 
+// Shows the selected player: their dashboard once they have a coach,
+// otherwise the join-a-coach card. The coach is per player, so a parent may
+// see one child's dashboard and another child's join card.
 export default function PlayerHome() {
-  const { me } = useAuth()
-  const hasCoach = !!me?.coachId
+  const { selectedPlayer, playersLoading, playersError } = usePlayers()
+  const hasCoach = !!selectedPlayer?.coachId
 
   return (
     <div className="min-h-screen bg-canvas">
       <AppHeader />
       <main className="mx-auto max-w-5xl space-y-4 px-4 py-10">
-        {hasCoach ? <PlayerDashboard /> : <JoinCoachCard />}
+        {playersLoading ? (
+          <p className="text-sm text-ink-mute">Loading…</p>
+        ) : playersError ? (
+          <p className="text-sm text-red-400">{playersError}</p>
+        ) : hasCoach ? (
+          <PlayerDashboard />
+        ) : (
+          <JoinCoachCard />
+        )}
       </main>
       <AppFooter />
     </div>
@@ -30,7 +42,8 @@ export default function PlayerHome() {
 // TODO: replace drills and feedback with real fetches once they have
 // backend endpoints.
 function PlayerDashboard() {
-  const { me } = useAuth()
+  const { selectedPlayer } = usePlayers()
+  const name = selectedPlayer?.name ?? 'Player'
   const { evaluation, loading, error } = useMyLatestEvaluation()
   const drills: Drill[] = []
   const feedback: CoachFeedback[] = []
@@ -43,7 +56,7 @@ function PlayerDashboard() {
         <p className="text-sm text-red-400">{error}</p>
       ) : evaluation ? (
         <>
-          <PlayerSnapshot name={me?.name ?? 'Player'} evaluation={evaluation} />
+          <PlayerSnapshot name={name} evaluation={evaluation} />
 
           <FeedbackBanner feedback={feedback} />
 
@@ -56,7 +69,7 @@ function PlayerDashboard() {
         </>
       ) : (
         <div className="rounded-2xl border border-line bg-surface p-6">
-          <h1 className="text-xl font-semibold text-ink">Welcome, {me?.name ?? 'player'}</h1>
+          <h1 className="text-xl font-semibold text-ink">Welcome, {name}</h1>
           <p className="mt-2 text-sm text-ink-soft">
             You don't have an evaluation yet. Once your coach completes one, your overall rating and
             attributes will show up here.
@@ -70,7 +83,8 @@ function PlayerDashboard() {
 }
 
 function JoinCoachCard() {
-  const { session, refreshMe } = useAuth()
+  const { session } = useAuth()
+  const { selectedPlayer, refreshPlayers } = usePlayers()
   const [code, setCode] = useState('')
   const [joining, setJoining] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -84,15 +98,15 @@ function JoinCoachCard() {
       return
     }
 
-    if (!session) {
+    if (!session || !selectedPlayer) {
       setError('Please sign in to join a coach.')
       return
     }
 
     setJoining(true)
     try {
-      await joinCoachByCode(session.access_token, code)
-      await refreshMe() // pick up coachId and coachName from the backend
+      await joinCoachByCode(session.access_token, selectedPlayer.id, code)
+      await refreshPlayers() // pick up this player's coachId and coachName
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not join with that code.')
     } finally {

@@ -130,7 +130,7 @@ public class CoachController {
         List<RosterPlayerResponse> players = playerRepository.findByCoachId(id).stream()
                 .map(player -> new RosterPlayerResponse(
                         player.getId(),
-                        player.getUser().getName(),
+                        player.getName(),
                         player.getTeam(),
                         player.getPosition()))
                 .toList();
@@ -391,7 +391,7 @@ public class CoachController {
                             drill.getDurationMinutes(),
                             drill.isRequiresVideo(),
                             player.getId(),
-                            player.getUser().getName(),
+                            player.getName(),
                             a.getDueDate(),
                             a.getStatus(),
                             a.getCoachNote(),

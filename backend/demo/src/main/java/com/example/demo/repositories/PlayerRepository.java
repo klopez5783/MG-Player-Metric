@@ -18,4 +18,6 @@ public interface PlayerRepository extends JpaRepository<Players, UUID> {
     Optional<Players> findByIdAndUserId(UUID playerId, UUID userId);
 
     boolean existsByUserId(UUID userId);
+
+    long countByUserId(UUID userId);
 }

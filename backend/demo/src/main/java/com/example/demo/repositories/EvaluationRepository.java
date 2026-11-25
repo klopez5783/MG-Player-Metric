@@ -13,4 +13,6 @@ public interface EvaluationRepository extends JpaRepository<Evaluation, Integer>
 
     // The player's most recent evaluation, same ordering as above.
     Optional<Evaluation> findFirstByPlayerIdOrderByEvaluationDateDescIdDesc(UUID playerId);
+
+    boolean existsByPlayerId(UUID playerId);
 }

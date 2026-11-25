@@ -20,4 +20,6 @@ public interface DrillAssignmentRepository extends JpaRepository<DrillAssignment
     // Whether the player already has this drill in the given status, e.g.
     // "assigned" to block giving them the same open drill twice.
     boolean existsByDrillIdAndPlayerIdAndStatus(Integer drillId, UUID playerId, String status);
+
+    boolean existsByPlayerId(UUID playerId);
 }

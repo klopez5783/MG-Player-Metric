@@ -252,6 +252,22 @@ export async function updatePlayer(
   return res.json()
 }
 
+// 409 when the player can't be removed: it's the account's last player, or
+// it already has evaluations or drills.
+export async function deletePlayer(accessToken: string, playerId: string): Promise<void> {
+  const res = await fetch(`${API_URL}/players/me/${playerId}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${accessToken}` },
+  })
+
+  if (res.status === 409) {
+    throw new Error('This player already has evaluations or drills, so they can’t be deleted.')
+  }
+  if (!res.ok) {
+    throw new Error(`Failed to delete player (${res.status})`)
+  }
+}
+
 export async function joinCoachByCode(accessToken: string, playerId: string, code: string): Promise<void> {
   const res = await fetch(`${API_URL}/players/me/${playerId}/coach`, {
     method: 'POST',

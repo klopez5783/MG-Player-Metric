@@ -1,6 +1,12 @@
 import { useState, type FormEvent } from 'react'
 import FormField from '../../components/FormField'
-import { addPlayer, updatePlayer, type CreatePlayerRequest, type PlayerSummary } from '../../api/backend'
+import {
+  addPlayer,
+  deletePlayer,
+  updatePlayer,
+  type CreatePlayerRequest,
+  type PlayerSummary,
+} from '../../api/backend'
 import { useAuth } from '../../hooks/useAuth'
 import { usePlayers } from '../../hooks/usePlayers'
 
@@ -43,6 +49,8 @@ export default function AccountPlayers() {
                           <SmallButton onClick={() => selectPlayer(player.id)}>View</SmallButton>
                         ))}
                       <SmallButton onClick={() => setEditingId(player.id)}>Edit</SmallButton>
+                      {/* The account always keeps at least one player. */}
+                      {players.length > 1 && <DeletePlayerButton player={player} />}
                     </div>
                   </div>
                   <dl className="mt-1 grid grid-cols-3 gap-2 text-xs">
@@ -83,6 +91,49 @@ function SmallButton({ onClick, children }: { onClick: () => void; children: str
     >
       {children}
     </button>
+  )
+}
+
+// Asks first, since deleting can't be undone. Errors (e.g. the player has
+// history) show under the row's buttons.
+function DeletePlayerButton({ player }: { player: PlayerSummary }) {
+  const { session } = useAuth()
+  const { refreshPlayers } = usePlayers()
+  const [deleting, setDeleting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function handleDelete() {
+    if (!session) return
+    if (!window.confirm(`Delete ${player.name ?? 'this player'}? This can't be undone.`)) return
+
+    setDeleting(true)
+    setError(null)
+    try {
+      await deletePlayer(session.access_token, player.id)
+      // If this was the selected player, the provider falls back to the first one.
+      await refreshPlayers()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not delete the player.')
+      setDeleting(false)
+    }
+  }
+
+  return (
+    <span className="relative">
+      <button
+        type="button"
+        onClick={handleDelete}
+        disabled={deleting}
+        className="rounded-lg border border-red-500/40 bg-canvas px-3 py-1 text-xs font-medium text-red-400 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        {deleting ? 'Deleting…' : 'Delete'}
+      </button>
+      {error && (
+        <span role="alert" className="absolute right-0 top-full z-10 mt-1 w-56 rounded-md border border-line bg-surface px-2 py-1 text-xs text-red-400">
+          {error}
+        </span>
+      )}
+    </span>
   )
 }
 

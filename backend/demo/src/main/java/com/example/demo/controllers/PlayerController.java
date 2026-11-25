@@ -130,6 +130,25 @@ public class PlayerController {
         return ResponseEntity.ok(toSummary(player));
     }
 
+    // Remove a player added by mistake. 409 if it's the account's last player
+    // (every player account keeps one), or if the player already has
+    // evaluations or drill assignments: those reference the player and
+    // would be lost. 404 if this login doesn't manage the player.
+    @DeleteMapping("/me/{playerId}")
+    @Transactional
+    public ResponseEntity<Void> deletePlayer(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID playerId) {
+        Players player = ownedPlayer(jwt, playerId);
+        if (player == null)
+            return ResponseEntity.notFound().build(); // not one of this login's players
+        if (playerRepository.countByUserId(player.getUser().getId()) <= 1)
+            return ResponseEntity.status(HttpStatus.CONFLICT).build(); // last player
+        if (evaluationRepository.existsByPlayerId(playerId) || drillAssignmentRepository.existsByPlayerId(playerId))
+            return ResponseEntity.status(HttpStatus.CONFLICT).build(); // has history
+
+        playerRepository.delete(player);
+        return ResponseEntity.noContent().build();
+    }
+
     // The player's most recent evaluation, with attribute and sub-attribute
     // ratings and comments nested. 204 if they have none yet, 404 if this
     // login doesn't manage the player.

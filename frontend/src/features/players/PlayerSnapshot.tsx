@@ -1,11 +1,20 @@
+import { Link } from 'react-router'
 import RadarChart from '../evaluations/RadarChart'
 import type { EvaluationDetailResponse } from '../../api/backend'
 import { scoreTier } from '../evaluations/scoreTier'
 import { FOOTBALL_IQ, ratingOf } from '../evaluations/ratingCategories'
 
 // Ratings are 1–10; scoreTier works on 0–100, so scores are multiplied by 10
-// for the color only.
-export default function PlayerSnapshot({ name, evaluation }: { name: string; evaluation: EvaluationDetailResponse }) {
+// for the color only. Age is null when no date of birth has been entered.
+export default function PlayerSnapshot({
+  name,
+  age,
+  evaluation,
+}: {
+  name: string
+  age: number | null
+  evaluation: EvaluationDetailResponse
+}) {
   const initials = name
     .split(' ')
     .map((part) => part[0])
@@ -28,13 +37,24 @@ export default function PlayerSnapshot({ name, evaluation }: { name: string; eva
           </div>
           <div>
             <h1 className="text-xl font-semibold text-ink">{name}</h1>
-            <p className="text-sm text-ink-mute">
-              Last evaluated {new Date(evaluation.evaluationDate).toLocaleDateString()}
-            </p>
+            
             <div className="mt-1 flex flex-wrap items-baseline gap-x-5">
               <Score value={overall} label="Overall" />
               <Score value={footballIq} label="Football IQ" />
             </div>
+            <p className="mt-1 text-sm text-ink">
+              {age != null ? (
+                `Ratings based on the U${age} age group.`
+              ) : (
+                <>
+                  Add a date of birth on the{' '}
+                  <Link to="/profile" className="underline hover:text-ink">
+                    Profile
+                  </Link>{' '}
+                  page to see which age group these ratings are based on.
+                </>
+              )}
+            </p>
           </div>
         </div>
 

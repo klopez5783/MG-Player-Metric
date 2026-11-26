@@ -43,6 +43,7 @@ export default function PlayerHome() {
 // backend endpoints.
 function PlayerDashboard() {
   const { selectedPlayer } = usePlayers()
+  console.log('selectedPlayer', selectedPlayer)
   const name = selectedPlayer?.name ?? 'Player'
   const { evaluation, loading, error } = useMyLatestEvaluation()
   const drills: Drill[] = []
@@ -56,7 +57,7 @@ function PlayerDashboard() {
         <p className="text-sm text-red-400">{error}</p>
       ) : evaluation ? (
         <>
-          <PlayerSnapshot name={name} evaluation={evaluation} />
+          <PlayerSnapshot name={name} age={selectedPlayer?.age ?? null} evaluation={evaluation} />
 
           <FeedbackBanner feedback={feedback} />
 

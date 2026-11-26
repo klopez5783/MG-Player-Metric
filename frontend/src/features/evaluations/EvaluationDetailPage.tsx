@@ -10,6 +10,7 @@ import {
 } from '../../api/backend'
 import { useAuth } from '../../hooks/useAuth'
 import { scoreTier } from './scoreTier'
+import { FOOTBALL_IQ, ratingOf } from './ratingCategories'
 
 // Read-only view of one saved evaluation: header details, every attribute
 // with its sub-attribute ratings, and the written summary. Where
@@ -86,9 +87,17 @@ export default function EvaluationDetailPage() {
                     {formatDate(evaluation.evaluationDate)} · {capitalize(evaluation.evaluationType)} evaluation
                   </p>
                 </div>
-                <div className="text-right">
-                  <p className="text-xs text-ink-mute">Overall rating</p>
-                  <p className="text-3xl font-bold text-ink">{evaluation.overallRating ?? '—'}</p>
+                <div className="flex gap-6">
+                  <div className="text-right">
+                    <p className="text-xs text-ink-mute">Football IQ</p>
+                    <p className="text-3xl font-bold text-ink">
+                      {ratingOf(evaluation.attributes, FOOTBALL_IQ) ?? '—'}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-ink-mute">Overall rating</p>
+                    <p className="text-3xl font-bold text-ink">{evaluation.overallRating ?? '—'}</p>
+                  </div>
                 </div>
               </div>
             </section>

@@ -5,6 +5,11 @@ import { useCoachRoster } from "../players/useCoachRoster";
 import { sendEvaluation } from "../../api/backend";
 import { useAuth } from "../../hooks/useAuth";
 import { useAttributeCatalog } from "./useAttributeCatalog";
+import {
+  FOOTBALL_IQ,
+  PSYCHOLOGICAL,
+  countsTowardOverall,
+} from "./ratingCategories";
 import { Link, useNavigate, useSearchParams } from "react-router";
 
 // One sub-attribute's input: the slider value (undefined until the coach
@@ -103,19 +108,21 @@ export default function StartEvaluationPage() {
     [catalog, subAttributeRatings],
   );
 
-  // Coachability preview: the Psychological / Learning score, matched by name
-  // since ids can change when the catalog is re-seeded.
+  // Coachability and Football IQ previews: rated on their own, outside the
+  // player card.
   const coachabilityRating = useMemo(
-    () =>
-      skillStats.find((c) => c.name === "Psychological / Learning")?.score ??
-      null,
+    () => skillStats.find((c) => c.name === PSYCHOLOGICAL)?.score ?? null,
+    [skillStats],
+  );
+  const footballIqRating = useMemo(
+    () => skillStats.find((c) => c.name === FOOTBALL_IQ)?.score ?? null,
     [skillStats],
   );
 
-  // Player-card preview: average of every other rated category.
+  // Player-card preview: average of the rated player-card skills.
   const skillCardAverage = useMemo(() => {
     const present = skillStats
-      .filter((c) => c.name !== "Psychological / Learning" && c.score != null)
+      .filter((c) => countsTowardOverall(c.name) && c.score != null)
       .map((c) => c.score as number);
     return average(present);
   }, [skillStats]);
@@ -170,10 +177,13 @@ export default function StartEvaluationPage() {
     setSaving(true);
     setSaveError(null);
     try {
-      const { id } = await sendEvaluation(session.access_token, payload);
+      const { evaluationId } = await sendEvaluation(
+        session.access_token,
+        payload,
+      );
       // Replace the form in history so Back from the saved evaluation
       // doesn't return to an empty form.
-      navigate(`/coach/evaluations/${id}`, { replace: true });
+      navigate(`/coach/evaluations/${evaluationId}`, { replace: true });
     } catch (error) {
       setSaveError(
         error instanceof Error ? error.message : "Failed to save evaluation",
@@ -283,13 +293,21 @@ export default function StartEvaluationPage() {
             <h2 className="text-sm font-semibold text-ink">
               Part 2 · Attribute ratings
             </h2>
-            <div className="flex gap-6">
+            <div className="flex flex-wrap gap-6">
               <div className="text-right">
                 <p className="text-xs text-ink-mute">
                   Coachability rating (preview)
                 </p>
                 <p className="text-2xl font-bold text-ink">
                   {coachabilityRating ?? "—"}
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs text-ink-mute">
+                  Football IQ (preview)
+                </p>
+                <p className="text-2xl font-bold text-ink">
+                  {footballIqRating ?? "—"}
                 </p>
               </div>
               <div className="text-right">

@@ -37,7 +37,7 @@ export interface ReviewDrillRequest {
 }
 
 export interface CreateEvaluationResponse {
-  id: number
+  evaluationId: number
 }
 
 export type Role = 'coach' | 'player'

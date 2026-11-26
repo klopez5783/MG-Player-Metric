@@ -1,6 +1,7 @@
 import RadarChart from '../evaluations/RadarChart'
 import type { EvaluationDetailResponse } from '../../api/backend'
 import { scoreTier } from '../evaluations/scoreTier'
+import { FOOTBALL_IQ, ratingOf } from '../evaluations/ratingCategories'
 
 // Ratings are 1–10; scoreTier works on 0–100, so scores are multiplied by 10
 // for the color only.
@@ -14,6 +15,8 @@ export default function PlayerSnapshot({ name, evaluation }: { name: string; eva
     .toUpperCase()
 
   const overall = evaluation.overallRating
+  // Rated on its own, so it sits beside Overall rather than inside it.
+  const footballIq = ratingOf(evaluation.attributes, FOOTBALL_IQ)
   const radarAttributes = evaluation.attributes.map((a) => ({ label: a.name, score: a.rating ?? 0 }))
 
   return (
@@ -28,15 +31,24 @@ export default function PlayerSnapshot({ name, evaluation }: { name: string; eva
             <p className="text-sm text-ink-mute">
               Last evaluated {new Date(evaluation.evaluationDate).toLocaleDateString()}
             </p>
-            <p className={`mt-1 text-3xl font-bold ${overall != null ? scoreTier(overall * 10).text : 'text-ink-mute'}`}>
-              {overall ?? '—'}
-              <span className="ml-1 text-sm font-medium text-ink-mute">Overall</span>
-            </p>
+            <div className="mt-1 flex flex-wrap items-baseline gap-x-5">
+              <Score value={overall} label="Overall" />
+              <Score value={footballIq} label="Football IQ" />
+            </div>
           </div>
         </div>
 
         {radarAttributes.length >= 3 && <RadarChart attributes={radarAttributes} max={10} />}
       </div>
     </div>
+  )
+}
+
+function Score({ value, label }: { value: number | null; label: string }) {
+  return (
+    <p className={`text-3xl font-bold ${value != null ? scoreTier(value * 10).text : 'text-ink-mute'}`}>
+      {value ?? '—'}
+      <span className="ml-1 text-sm font-medium text-ink-mute">{label}</span>
+    </p>
   )
 }

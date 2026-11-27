@@ -8,6 +8,7 @@ import java.util.List;
 
 import jakarta.validation.Valid;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -35,6 +36,9 @@ import com.example.demo.dto.EvaluationDetailResponse;
 import com.example.demo.dto.EvaluationSummaryResponse;
 import com.example.demo.dto.GetAssignedDrillsRequest;
 import com.example.demo.dto.GetAssignedDrillsResponse;
+import com.example.demo.events.DrillAssignedEvent;
+import com.example.demo.events.DrillReviewedEvent;
+import com.example.demo.events.EvaluationCreatedEvent;
 import com.example.demo.entities.Coaches;
 import com.example.demo.entities.Players;
 import com.example.demo.entities.Evaluation;
@@ -75,6 +79,8 @@ public class CoachController {
     private final EvaluationDetailService evaluationDetailService;
     private final DrillRepository drillRepository;
     private final DrillAssignmentRepository drillAssignmentRepository;
+    // Email notifications: NotificationListener sends them once the save commits.
+    private final ApplicationEventPublisher events;
 
     public CoachController(
             DrillAssignmentRepository drillAssignmentRepository,
@@ -86,7 +92,8 @@ public class CoachController {
             SubAttributeRepository subAttributeRepository,
             SubAttributeRatingRepository subAttributeRatingRepository,
             EvaluationDetailService evaluationDetailService,
-            DrillRepository drillRepository) {
+            DrillRepository drillRepository,
+            ApplicationEventPublisher events) {
         this.coachRepository = coachRepository;
         this.playerRepository = playerRepository;
         this.evaluationRepository = evaluationRepository;
@@ -97,6 +104,7 @@ public class CoachController {
         this.evaluationDetailService = evaluationDetailService;
         this.drillRepository = drillRepository;
         this.drillAssignmentRepository = drillAssignmentRepository;
+        this.events = events;
     }
 
     // Returns the coach's invite code, generating and saving one the first time.
@@ -239,6 +247,9 @@ public class CoachController {
             }
         }
 
+        events.publishEvent(new EvaluationCreatedEvent(
+                player.getUser().getEmail(), player.getName(), coach.getUser().getName()));
+
         return ResponseEntity.ok(new CreateEvaluationResponse(evaluation.getId()));
     }
 
@@ -318,7 +329,9 @@ public class CoachController {
         return ResponseEntity.noContent().build();
     }
 
+    // Transactional so the assignment email (sent after commit) goes out.
     @PostMapping("/me/drill-assignments")
+    @Transactional
     public ResponseEntity<CreateDrillAssignmentResponse> assignDrill(
             @AuthenticationPrincipal Jwt jwt,
             @Valid @RequestBody CreateDrillAssignmentRequest request) {
@@ -355,6 +368,10 @@ public class CoachController {
         assignment.setDueDate(request.dueDate());
         assignment.setCoachNote(request.coachNote());
         DrillAssignment saved = drillAssignmentRepository.save(assignment);
+
+        events.publishEvent(new DrillAssignedEvent(
+                player.getUser().getEmail(), player.getName(), coach.getUser().getName(),
+                drill.getName(), saved.getDueDate()));
 
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(new CreateDrillAssignmentResponse(saved.getId()));
@@ -431,6 +448,11 @@ public class CoachController {
         assignment.setCoachReviewComment(request.comment());
         assignment.setStatus("reviewed");
         assignment.setReviewedAt(LocalDateTime.now());
+
+        Players player = assignment.getPlayer();
+        events.publishEvent(new DrillReviewedEvent(
+                player.getUser().getEmail(), player.getName(), assignment.getCoach().getUser().getName(),
+                assignment.getDrill().getName(), request.comment()));
         return ResponseEntity.noContent().build();
     }
 

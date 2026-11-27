@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 import java.util.List;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -35,6 +36,8 @@ import com.example.demo.dto.PlayerSummaryResponse;
 import com.example.demo.dto.SubmitDrillRequest;
 import com.example.demo.dto.UpdatePlayerRequest;
 
+import com.example.demo.events.DrillSubmittedEvent;
+
 import com.example.demo.entities.Coaches;
 import com.example.demo.entities.Drill;
 import com.example.demo.entities.DrillAssignment;
@@ -56,6 +59,8 @@ public class PlayerController {
     private final EvaluationRepository evaluationRepository;
     private final EvaluationDetailService evaluationDetailService;
     private final DrillAssignmentRepository drillAssignmentRepository;
+    // Email notifications: NotificationListener sends them once the save commits.
+    private final ApplicationEventPublisher events;
 
     public PlayerController(
             PlayerRepository playerRepository,
@@ -63,13 +68,15 @@ public class PlayerController {
             CoachRepository coachRepository,
             EvaluationRepository evaluationRepository,
             EvaluationDetailService evaluationDetailService,
-            DrillAssignmentRepository drillAssignmentRepository) {
+            DrillAssignmentRepository drillAssignmentRepository,
+            ApplicationEventPublisher events) {
         this.playerRepository = playerRepository;
         this.userRepository = userRepository;
         this.coachRepository = coachRepository;
         this.evaluationRepository = evaluationRepository;
         this.evaluationDetailService = evaluationDetailService;
         this.drillAssignmentRepository = drillAssignmentRepository;
+        this.events = events;
     }
 
     // The players this login manages, newest first.
@@ -275,6 +282,9 @@ public class PlayerController {
         assignment.setPlayerNote(request.playerNote());
         assignment.setStatus("submitted");
         assignment.setSubmittedAt(LocalDateTime.now());
+
+        events.publishEvent(new DrillSubmittedEvent(
+                assignment.getCoach().getUser().getEmail(), player.getName(), assignment.getDrill().getName()));
         return ResponseEntity.noContent().build();
     }
 
